@@ -1,0 +1,31 @@
+<section id="example" class="about section">
+    <div class="container">
+        <h2 class="title text-center">Example</h2>
+        <div class="row">
+            <div class="item col-md-6 col-sm-6 col-xs-12">
+                <div class="code-block">
+                    <!--//Use Prismjs - http://prismjs.com/index.html#basic-usage -->
+                    <pre><code class="language-markup">
+&ltp class="my-style"&gt
+  Hello World!
+&lt/p&gt
+                     </code></pre>
+                </div>
+            </div>
+            <div class="item col-md-6 col-sm-6 col-xs-12">
+                <script>
+                    sigma.parsers.json('example.json', {
+                        container: 'example-container',
+                        settings: {
+                            defaultNodeColor: '#ec5148'
+                        }
+                    });
+                </script>
+                <div style="max-width: 600px; height: 400px; background-color:white;"id="example-container"></div>
+                <!--http://sigmajs.org/-->
+            </div>
+        </div>
+
+        
+    </div>
+</section>
