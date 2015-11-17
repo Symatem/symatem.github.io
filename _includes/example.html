@@ -6,9 +6,18 @@
                 <div class="code-block">
                     <!--//Use Prismjs - http://prismjs.com/index.html#basic-usage -->
                     <pre><code class="language-markup">
-&ltp class="my-style"&gt
-  Hello World!
-&lt/p&gt
+(FibonacciRecursive; Execute)
+(Procedure Create; Output #a #b; Next)
+(Procedure LessThan; Input Input; Comparandum 2; Output #a; Next)
+(Procedure Branch; Input #a;
+    Branch (Procedure CloneExtend; Input Input; Output Output; Next)
+           (Procedure Pop; Count 2;);
+    Next)
+(Procedure Subtract; Minuend Input; Subtrahend 2; Output #b; Next)
+(Procedure FibonacciRecursive; Input #b; Output #a; Next)
+(Procedure Subtract; Minuend Input; Subtrahend 1; Output #b; Next)
+(Procedure FibonacciRecursive; Input #b; Output #b; Next)
+(Procedure Add; Input #a #b; Output Output;)
                      </code></pre>
                 </div>
             </div>
@@ -25,7 +34,8 @@
                 <!--http://sigmajs.org/-->
             </div>
         </div>
-
-        
+        <p class="text-center">
+            <a class="btn btn-cta-primary scrollto" href="#docs">Get started</a>
+        </p>    
     </div>
 </section>
