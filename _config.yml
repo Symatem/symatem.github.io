@@ -9,6 +9,6 @@
 title: Symantem
 email: AlexanderMeissner@gmx.net
 author: "Alexander Meißner"
-description: > An entirely new way of defining software
+description: "An entirely new way of defining software"
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "http://symantem.github.io"
