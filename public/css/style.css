@@ -54,29 +54,29 @@ a.btn:focus {
 }
 a.btn-cta-primary,
 .btn-cta-primary {
-  background: #b6e130;
-  border: 1px solid #3e6802;
+  background: #023f0a;
+  border: 1px solid #28c646;
   color: #3e6802;
   font-weight: 600;
   text-transform: uppercase;
 }
 a.btn-cta-primary:hover,
 .btn-cta-primary:hover {
-  background: #ceff6b;
-  color: #fff;
+  background: #3e6802;
+  color: #023f0a;
 }
 a.btn-cta-secondary,
 .btn-cta-secondary {
-  background: #b6e130;
-  border: 1px solid #3e6802;
+  background: #023f0a;
+  border: 1px solid #28c646;
   color: #3e6802;
   font-weight: 600;
   text-transform: uppercase;
 }
 a.btn-cta-secondary:hover,
 .btn-cta-secondary:hover {
-  background: #ceff6b;
-  color: #fff;
+  background: #3e6802;
+  color: #023f0a;
 }
 .text-highlight {
   color: #2a435c;
@@ -90,7 +90,7 @@ pre code {
 /* ======= Header ======= */
 .header {
   padding: 10px 0;
-  background: #0c8f28;
+  background: #023f0a;
   color: #fff;
   position: fixed;
   width: 100%;
@@ -222,18 +222,8 @@ pre code {
 .promo .meta a:hover {
   color: #2a435c;
 }
-.promo .social-media {
-  background: #426a90;
-  padding: 10px 0;
-  margin: 0 auto;
-}
-.promo .social-media li {
-  margin-top: 15px;
-}
-.promo .social-media li.facebook-like {
-  margin-top: 0;
-  position: relative;
-  top: -5px;
+.code-block pre {
+    margin: 0;
 }
 /* ======= About Section ======= */
 .about {
@@ -554,7 +544,7 @@ pre code {
 /* ======= Footer ======= */
 .footer {
   padding: 15px 0;
-  background: #0e390b;
+  background: #023f0a;
   color: #fff;
 }
 .footer .copyright {
