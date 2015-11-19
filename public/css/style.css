@@ -5,7 +5,6 @@
  * Website: http://themes.3rdwavemedia.com/
  * Twitter: @3rdwave_themes
 */
-/* style-3.css */
 /* ======= Base ======= */
 body {
   font-family: 'Lato', arial, sans-serif;
@@ -25,7 +24,7 @@ h6 {
   color: #fff;
 }
 a {
-  color: #6690b9;
+  color: #28c646;
   -webkit-transition: all 0.4s ease-in-out;
   -moz-transition: all 0.4s ease-in-out;
   -ms-transition: all 0.4s ease-in-out;
@@ -33,7 +32,7 @@ a {
 }
 a:hover {
   text-decoration: underline;
-  color: #4a77a2;
+  color: #7dd104;
 }
 .btn,
 a.btn {
@@ -55,27 +54,29 @@ a.btn:focus {
 }
 a.btn-cta-primary,
 .btn-cta-primary {
-  background: #89c629;
-  border: 1px solid #7dd104;
-  color: #fff;
+  background: #b6e130;
+  border: 1px solid #3e6802;
+  color: #3e6802;
   font-weight: 600;
   text-transform: uppercase;
 }
 a.btn-cta-primary:hover,
 .btn-cta-primary:hover {
   background: #ceff6b;
+  color: #fff;
 }
 a.btn-cta-secondary,
 .btn-cta-secondary {
-  background: #89c629;
-  border: 1px solid #7dd104;
-  color: #fff;
+  background: #b6e130;
+  border: 1px solid #3e6802;
+  color: #3e6802;
   font-weight: 600;
   text-transform: uppercase;
 }
 a.btn-cta-secondary:hover,
 .btn-cta-secondary:hover {
   background: #ceff6b;
+  color: #fff;
 }
 .text-highlight {
   color: #2a435c;
@@ -145,7 +146,7 @@ pre code {
   font-family: 'Montserrat', sans-serif;
 }
 .header .main-nav .nav .nav-item.active a {
-  color: #6690b9;
+  color: #0c8f28;
   background: none;
 }
 .header .main-nav .nav .nav-item a {
@@ -158,7 +159,7 @@ pre code {
   padding: 15px 10px;
 }
 .header .main-nav .nav .nav-item a:hover {
-  color: #2a435c;
+  color: #000;
   background: none;
 }
 .header .main-nav .nav .nav-item a:focus {
@@ -170,14 +171,14 @@ pre code {
   background: none;
 }
 .header .main-nav .nav .nav-item.active {
-  color: #6690b9;
+  color: #0c8f28;
 }
 .header .main-nav .nav .nav-item.last {
   margin-right: 0;
 }
 /* ======= Promo Section ======= */
 .promo {
-  background: #6690b9;
+  background: #000;
   padding-top: 150px;
 }
 .promo .title .logo {
@@ -186,7 +187,7 @@ pre code {
     margin-bottom:-20pt;
     display: inline-block;
     background: #28c646;
-    -webkit-mask: url(public/images/logo.svg);
+    -webkit-mask: url(/public/images/logo.svg);
 }
 .promo .title {
   font-size: 98px;
@@ -273,23 +274,23 @@ pre code {
 /* ======= Features Section ======= */
 .features {
   padding: 80px 0;
-  background: #6690b9;
+  background: #000;
   color: #fff;
 }
 .features .title {
-  color: #2a435c;
+  color: #fff;
   margin-top: 0;
   margin-bottom: 30px;
 }
 .features a {
-  color: #2a435c;
+  color: #fff;
 }
 .features a:hover {
-  color: #1a2a39;
+  color: #fff;
 }
 .features .feature-list li {
   margin-bottom: 10px;
-  color: #2a435c;
+  color: #fff;
 }
 .features .feature-list li .fa {
   margin-right: 5px;
@@ -416,7 +417,7 @@ pre code {
 /* ======= Contact Section ======= */
 .contact {
   padding: 80px 0;
-  background: #6690b9;
+  background: #000;
   color: #fff;
 }
 .contact .contact-inner {
@@ -424,7 +425,7 @@ pre code {
   margin: 0 auto;
 }
 .contact .title {
-  color: #2a435c;
+  color: #fff;
   margin-top: 0;
   margin-bottom: 30px;
 }
@@ -432,10 +433,10 @@ pre code {
   margin-bottom: 60px;
 }
 .contact a {
-  color: #2a435c;
+  color: #fff;
 }
 .contact a:hover {
-  color: #1a2a39;
+  color: #fff;
 }
 .contact .author-message {
   position: relative;
@@ -553,7 +554,7 @@ pre code {
 /* ======= Footer ======= */
 .footer {
   padding: 15px 0;
-  background: #1a2a39;
+  background: #0e390b;
   color: #fff;
 }
 .footer .copyright {
