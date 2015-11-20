@@ -32,7 +32,7 @@ a {
 }
 a:hover {
   text-decoration: underline;
-  color: #7dd104;
+  color: #34ff5a;
 }
 .btn,
 a.btn {
@@ -91,51 +91,20 @@ a.btn-cta-secondary:hover,
 .header {
   padding: 10px 0;
   background: #000;
-  color: #fff;
+  color: #28c646;
   position: fixed;
   width: 100%;
 }
 .header.navbar-fixed-top {
-  background: #fff;
   z-index: 9999;
   -webkit-box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
   -moz-box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
 }
-.header.navbar-fixed-top .logo a {
-  color: #28c646;
-}
-.header.navbar-fixed-top .main-nav .nav .nav-item a {
-  color: #28c646;
-}
 .header .logo {
   margin: 0;
   font-size: 26px;
   padding-top: 10px;
-}
-.header .logo a {
-  color: #fff;
-}
-.header .logo a:hover {
-  text-decoration: none;
-}
-.header .main-nav button {
-  background: #28c646;
-  color: #fff !important;
-  -webkit-border-radius: 4px;
-  -moz-border-radius: 4px;
-  -ms-border-radius: 4px;
-  -o-border-radius: 4px;
-  border-radius: 4px;
-  -moz-background-clip: padding;
-  -webkit-background-clip: padding-box;
-  background-clip: padding-box;
-}
-.header .main-nav button:focus {
-  outline: none;
-}
-.header .main-nav button .icon-bar {
-  background-color: #fff;
 }
 .header .main-nav .navbar-collapse {
   padding: 0;
@@ -145,12 +114,8 @@ a.btn-cta-secondary:hover,
   margin-right: 30px;
   font-family: 'Montserrat', sans-serif;
 }
-.header .main-nav .nav .nav-item.active a {
-  color: #0c8f28;
-  background: none;
-}
 .header .main-nav .nav .nav-item a {
-  color: #fff;
+  color: #28c646;
   -webkit-transition: none;
   -moz-transition: none;
   -ms-transition: none;
@@ -158,23 +123,13 @@ a.btn-cta-secondary:hover,
   font-size: 14px;
   padding: 15px 10px;
 }
+.header .main-nav .nav .nav-item.active a {
+  color: #34ff5a;
+  background: none;
+}
 .header .main-nav .nav .nav-item a:hover {
-  color: #000;
+  color: #34ff5a;
   background: none;
-}
-.header .main-nav .nav .nav-item a:focus {
-  outline: none;
-  background: none;
-}
-.header .main-nav .nav .nav-item a:active {
-  outline: none;
-  background: none;
-}
-.header .main-nav .nav .nav-item.active {
-  color: #0c8f28;
-}
-.header .main-nav .nav .nav-item.last {
-  margin-right: 0;
 }
 /* ======= Promo Section ======= */
 .promo {
