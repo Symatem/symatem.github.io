@@ -90,7 +90,7 @@ a.btn-cta-secondary:hover,
 /* ======= Header ======= */
 .header {
   padding: 10px 0;
-  background: #023f0a;
+  background: #000;
   color: #fff;
   position: fixed;
   width: 100%;
@@ -193,9 +193,6 @@ a.btn-cta-secondary:hover,
   font-size: 98px;
   margin-top: 0;
 }
-.promo .title .highlight {
-  color: #f46fa3;
-}
 .promo .intro {
   color: #28c646;
   font-size: 28px;
@@ -250,19 +247,13 @@ a.btn-cta-secondary:hover,
   margin-top: 0;
   margin-bottom: 30px;
 }
-.timeline a {
-  color: #fff;
-}
-.timeline a:hover {
-  color: #fff;
-}
 .timeline .feature-list li {
   margin-bottom: 10px;
-  color: #fff;
+  color: #28c646;
 }
 .timeline .feature-list li .fa {
   margin-right: 5px;
-  color: #fff;
+  color: #28c646;
 }
 /* ======= Docs Section ======= */
 .docs {
@@ -273,6 +264,9 @@ a.btn-cta-secondary:hover,
   color: #000;
   margin-top: 0;
   margin-bottom: 30px;
+}
+.docs .sub-title {
+  color: #000;
 }
 .docs .docs-inner {
   max-width: 800px;
@@ -346,7 +340,7 @@ a.btn-cta-secondary:hover,
 /* ======= Footer ======= */
 .footer {
   padding: 15px 0;
-  background: #023f0a;
+  background: #000;
   color: #fff;
 }
 .footer .copyright {
