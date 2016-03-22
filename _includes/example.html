@@ -14,10 +14,11 @@
         Static (Comparandum 2;); Next)
     (Procedure Branch;
         Dynamic (Input #a;);
-        Static (
-            Branch (Procedure CloneBlob;
-                Dynamic (Input Input; Output Output;); Next)
-                        (Procedure Pop; Static (Count 2;););
+        Static ( Branch
+            (Procedure CloneBlob;
+                Dynamic (Input Input; Output Output;);
+            Next)
+            (Procedure Pop; Static (Count 2;););
         ); Next)
     (Procedure Subtract;
         Dynamic (Output #a; Minuend Input;);

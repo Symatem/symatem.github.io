@@ -2,7 +2,7 @@
 
 var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
 SymatemVisualizer = (function() {
-    SymatemVisualizer.prototype.canvasArea = [680, 400];
+    SymatemVisualizer.prototype.canvasArea = [650, 400];
 
     SymatemVisualizer.prototype.lineHeight = 20;
 
