@@ -2,27 +2,40 @@
     <div class="container">
         <h2 class="title text-center">Example</h2>
         <div class="row">
-            <div class="item col-md-6 col-sm-6 col-xs-12">
+            <div class="item col-md-5 col-sm-5 col-xs-12">
                 <div class="code-block">
                     <!--//Use Prismjs - http://prismjs.com/index.html#basic-usage -->
                     <pre><code class="language-markup">
     (FiboRec; Execute)
-    (Procedure Create; Static (Output #a #b;); Next)
-    (Procedure LessThan; Dynamic (Output #a; Input Input;); Static (Comparandum 2;); Next)
-    (Procedure Branch; Dynamic (Input #a;); Static (
-        Branch (Procedure CloneBlob; Dynamic (Input Input; Output Output;); Next)
-               (Procedure Pop; Static (Count 2;););
+    (Procedure Create;
+        Static (Output #a #b;); Next)
+    (Procedure LessThan;
+        Dynamic (Output #a; Input Input;);
+        Static (Comparandum 2;); Next)
+    (Procedure Branch;
+        Dynamic (Input #a;);
+        Static (
+            Branch (Procedure CloneBlob;
+                Dynamic (Input Input; Output Output;); Next)
+                        (Procedure Pop; Static (Count 2;););
         ); Next)
-    (Procedure Subtract; Dynamic (Output #a; Minuend Input;); Static (Subtrahend 2;); Next)
-    (Procedure FiboRec; Dynamic (Output #a; Input #a;); Next)
-    (Procedure Subtract; Dynamic (Output #b; Minuend Input;); Static (Subtrahend 1;); Next)
-    (Procedure FiboRec; Dynamic (Output #b; Input #b;); Next)
-    (Procedure Add; Dynamic (Output Output; Input #a #b;);)
+    (Procedure Subtract;
+        Dynamic (Output #a; Minuend Input;);
+        Static (Subtrahend 2;); Next)
+    (Procedure FiboRec;
+        Dynamic (Output #a; Input #a;); Next)
+    (Procedure Subtract;
+        Dynamic (Output #b; Minuend Input;);
+        Static (Subtrahend 1;); Next)
+    (Procedure FiboRec;
+        Dynamic (Output #b; Input #b;); Next)
+    (Procedure Add;
+        Dynamic (Output Output; Input #a #b;);)
                      </code></pre>
                 </div>
             </div>
-            <div class="item col-md-6 col-sm-6 col-xs-12">
-                <div style="max-width: 700px; height: 400px; background-color: #121212;" class="symatem-visualizer"></div>
+            <div class="item col-md-7 col-sm-7 col-xs-12">
+                <div style="background-color: rgb(39, 40, 34);" class="symatem-visualizer"></div>
                 <script>
                     new SymatemVisualizer(document.currentScript.parentNode.getElementsByClassName('symatem-visualizer')[0]);
                 </script>

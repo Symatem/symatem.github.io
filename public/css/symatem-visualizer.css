@@ -17,11 +17,10 @@
 }
 
 .symatem-visualizer {
-    width: 100%;
-    height: 500px;
     padding: 0px;
     margin: 0px;
     position: relative;
+    border-radius: 5px;
 }
 
 .symatem-visualizer .history {
@@ -92,7 +91,6 @@
 .symatem-visualizer * {
     font-style: normal;
     font-variant: normal;
-    font-size: 13px;
     fill: white;
     color: white;
 }

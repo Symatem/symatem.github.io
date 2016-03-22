@@ -2,6 +2,8 @@
 
 var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
 SymatemVisualizer = (function() {
+    SymatemVisualizer.prototype.canvasArea = [680, 400];
+
     SymatemVisualizer.prototype.lineHeight = 20;
 
     SymatemVisualizer.prototype.textOffsetY = 14;
@@ -239,13 +241,14 @@ SymatemVisualizer = (function() {
     };
 
     SymatemVisualizer.prototype.createBox = function(symbol, box) {
-      var circleRadius, getAbsolutePosition, i, left, line, posY, rect, ref, results, right, segment;
+      var circleRadius, focusCenter, focusEllipse, getAbsolutePosition, i, left, line, posY, rect, ref, results, right, segment;
+      focusCenter = [this.canvasArea[0] / 2, this.canvasArea[1] * 0.15];
+      focusEllipse = [this.canvasArea[0] * 0.35, this.canvasArea[1] * 0.6];
       box.width = this.boxWidth;
       box.height = (box.segments.length + 1) * this.lineHeight;
       box.setPosition = function(isFocused, symbolsToShow) {
-        var angle, angleTable, focusCenter, index, maxIndex, prevPos;
+        var angle, angleTable, index, maxIndex, prevPos;
         prevPos = [box.x, box.y];
-        focusCenter = [350, 50];
         if (isFocused) {
           box.x = focusCenter[0] - box.width / 2;
           box.y = focusCenter[1];
@@ -258,8 +261,8 @@ SymatemVisualizer = (function() {
           } else {
             angle = index / maxIndex * Math.PI;
           }
-          box.x = Math.cos(angle) * 250 + focusCenter[0] - box.width / 2;
-          box.y = Math.sin(angle) * 150 + focusCenter[1];
+          box.x = Math.cos(angle) * focusEllipse[0] + focusCenter[0] - box.width / 2;
+          box.y = Math.sin(angle) * focusEllipse[1] + focusCenter[1];
         }
         if (prevPos[0]) {
           box.animation.setAttribute('from', prevPos[0] + ',' + prevPos[1]);
@@ -347,6 +350,8 @@ SymatemVisualizer = (function() {
       this.boxes = [];
       this.connections = [];
       this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      this.svg.setAttribute('width', this.canvasArea[0]);
+      this.svg.setAttribute('height', this.canvasArea[1]);
       element.appendChild(this.svg);
       svgDefs = document.createElementNS(this.svg.namespaceURI, 'defs');
       this.svg.appendChild(svgDefs);
@@ -396,4 +401,5 @@ SymatemVisualizer = (function() {
     }
 
     return SymatemVisualizer;
+
 })();
