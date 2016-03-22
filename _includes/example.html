@@ -6,32 +6,26 @@
                 <div class="code-block">
                     <!--//Use Prismjs - http://prismjs.com/index.html#basic-usage -->
                     <pre><code class="language-markup">
-    (FibonacciRecursive; Execute)
-    (Procedure Create; Output #a #b; Next)
-    (Procedure LessThan; Input Input; Comparandum 2; Output #a; Next)
-    (Procedure Branch; Input #a;
-        Branch (Procedure CloneBlob; Input Input; Output Output; Next)
-               (Procedure Pop; Count 2;);
-        Next)
-    (Procedure Subtract; Minuend Input; Subtrahend 2; Output #b; Next)
-    (Procedure FibonacciRecursive; Input #b; Output #a; Next)
-    (Procedure Subtract; Minuend Input; Subtrahend 1; Output #b; Next)
-    (Procedure FibonacciRecursive; Input #b; Output #b; Next)
-    (Procedure Add; Input #a #b; Output Output;)
+    (FiboRec; Execute)
+    (Procedure Create; Static (Output #a #b;); Next)
+    (Procedure LessThan; Dynamic (Output #a; Input Input;); Static (Comparandum 2;); Next)
+    (Procedure Branch; Dynamic (Input #a;); Static (
+        Branch (Procedure CloneBlob; Dynamic (Input Input; Output Output;); Next)
+               (Procedure Pop; Static (Count 2;););
+        ); Next)
+    (Procedure Subtract; Dynamic (Output #a; Minuend Input;); Static (Subtrahend 2;); Next)
+    (Procedure FiboRec; Dynamic (Output #a; Input #a;); Next)
+    (Procedure Subtract; Dynamic (Output #b; Minuend Input;); Static (Subtrahend 1;); Next)
+    (Procedure FiboRec; Dynamic (Output #b; Input #b;); Next)
+    (Procedure Add; Dynamic (Output Output; Input #a #b;);)
                      </code></pre>
                 </div>
             </div>
             <div class="item col-md-6 col-sm-6 col-xs-12">
+                <div style="max-width: 700px; height: 400px; background-color: #121212;" class="symatem-visualizer"></div>
                 <script>
-                    sigma.parsers.json('{{ site.baseurl }}public/example.json', {
-                        container: 'example-container',
-                        settings: {
-                            defaultNodeColor: '#ec5148'
-                        }
-                    });
+                    new SymatemVisualizer(document.currentScript.parentNode.getElementsByClassName('symatem-visualizer')[0]);
                 </script>
-                <div style="max-width: 600px; height: 400px; background-color:white;"id="example-container"></div>
-                <!--http://sigmajs.org/-->
             </div>
         </div>
         <p class="text-center">
