@@ -3,3 +3,10 @@ pre {
   word-wrap: normal;
   white-space: pre;
 }
+
+#SymatemVisualizer {
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: rgb(39, 40, 34);
+    height: 560px;
+}
