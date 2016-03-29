@@ -85,6 +85,9 @@ a.btn-cta-secondary:hover,
   padding-top: 90px;
 }
 .code-block pre {
+  overflow: auto;
+  word-wrap: normal;
+  white-space: pre;
   margin: 0;
 }
 /* ======= Header ======= */

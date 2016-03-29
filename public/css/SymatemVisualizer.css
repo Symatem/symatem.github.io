@@ -1,0 +1,25 @@
+#SymatemVisualizer {
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: rgb(39, 40, 34);
+    height: 532px;
+    fill: white;
+    color: white;
+}
+
+#SymatemVisualizer .red {
+    stroke: #f44;
+}
+
+#SymatemVisualizer .green {
+    stroke: #4f8;
+}
+
+#SymatemVisualizer .blue {
+    stroke: #48f;
+}
+
+#SymatemVisualizer .gray {
+    fill: #aaa;
+    color: #aaa;
+}

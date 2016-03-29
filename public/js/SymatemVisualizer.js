@@ -10,10 +10,13 @@ function SymatemVisualizer(element) {
 
 SymatemVisualizer.prototype.syncLabel = function(label, symbol) {
     symbolName = this.data.symbolNames[symbol];
-    if(symbolName != undefined)
+    if(symbolName != undefined) {
         label.textContent = symbolName;
-    else
+        label.classList.remove('gray');
+    } else {
         label.textContent = '#'+symbol;
+        label.classList.add('gray');
+    }
 };
 
 SymatemVisualizer.prototype.syncNodeLabels = function(node) {
@@ -37,12 +40,13 @@ SymatemVisualizer.prototype.showSymbol = function(symbol) {
     for(var i = 0; i < node.lines.length; ++i)
         node.lines[i].classList.add('red');
     node.rect.classList.add('red');
-    node.label.onclick = this.handleLabelActivation.bind(this, node, node);
+    node.circle.classList.add('red');
+    node.circle.onactivation = this.handleLabelActivation.bind(this, node, node);
     for(var i = 0; i < node.leftSide.length; ++i) {
         node.leftSide[i].circle.classList.add('green');
-        node.leftSide[i].label.onclick = this.handleLabelActivation.bind(this, node, node.leftSide[i]);
+        node.leftSide[i].circle.onactivation = this.handleLabelActivation.bind(this, node, node.leftSide[i]);
         node.rightSide[i].circle.classList.add('blue');
-        node.rightSide[i].label.onclick = this.handleLabelActivation.bind(this, node, node.rightSide[i]);
+        node.rightSide[i].circle.onactivation = this.handleLabelActivation.bind(this, node, node.rightSide[i]);
     }
     this.syncNodeLabels(node);
 };
@@ -51,18 +55,21 @@ SymatemVisualizer.prototype.hideSymbol = function(symbol) {
     node = this.nodeIndex.get(symbol);
     this.nodeIndex.delete(symbol);
     this.linkedBoxes.delete(node);
-    this.linkedBoxes.syncGraph();
 };
 
 SymatemVisualizer.prototype.handleLabelActivation = function(node, segment) {
     if(node == segment) {
-        this.hideSymbol(segment.symbol);
+        this.linkedBoxes.cursorNode = node;
+        this.linkedBoxes.setCursorIndex(0);
         return;
     }
-    if(this.nodeIndex.has(segment.symbol))
-        return;
-    this.showSymbol(segment.symbol);
-    this.linkSymbolsAndSyncGraph();
+    if(this.nodeIndex.has(segment.symbol)) {
+        this.hideSymbol(segment.symbol);
+        this.linkedBoxes.syncGraph();
+    } else {
+        this.showSymbol(segment.symbol);
+        this.linkSymbolsAndSyncGraph();
+    }
 };
 
 SymatemVisualizer.prototype.linkSymbolsAndSyncGraph = function() {
