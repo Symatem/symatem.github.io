@@ -287,7 +287,7 @@ module.exports.prototype.tickGraph = function() {
         if(this.layoutEngine.tick())
             break;
 
-    trash = new Set;
+    var trash = new Set;
     for(var j = 0; j < this.nodes.length; ++j) {
         node = this.nodes[j];
         if(node.deathFlag) {
