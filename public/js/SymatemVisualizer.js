@@ -12,13 +12,13 @@ module.exports = function(element) {
 }
 
 module.exports.prototype.syncLabel = function(label, symbol) {
-    symbolName = this.data.symbolNames[symbol];
+    var symbolName = this.data.symbolNames[symbol];
     if(symbolName != undefined) {
         label.textContent = symbolName;
-        label.classList.remove('gray');
+        label.classList.remove('disabled');
     } else {
         label.textContent = '#'+symbol;
-        label.classList.add('gray');
+        label.classList.add('disabled');
     }
 };
 
@@ -31,7 +31,7 @@ module.exports.prototype.syncNodeLabels = function(node) {
 };
 
 module.exports.prototype.showSymbol = function(symbol) {
-    node = {leftSide:[], rightSide:[], symbol:symbol};
+    var node = {leftSide:[], rightSide:[], symbol:symbol};
     for(var i = 0; i < this.data.triples.length; ++i) {
         if(this.data.triples[i][0] != symbol)
             continue;
@@ -41,21 +41,21 @@ module.exports.prototype.showSymbol = function(symbol) {
     this.linkedBoxes.initializeNode(node);
     this.nodeIndex.set(symbol, node);
     for(var i = 0; i < node.lines.length; ++i)
-        node.lines[i].classList.add('red');
-    node.rect.classList.add('red');
-    node.circle.classList.add('red');
+        node.lines[i].classList.add('entity');
+    node.rect.classList.add('entity');
+    node.circle.classList.add('entity');
     node.circle.onactivation = this.handleLabelActivation.bind(this, node, node);
     for(var i = 0; i < node.leftSide.length; ++i) {
-        node.leftSide[i].circle.classList.add('green');
+        node.leftSide[i].circle.classList.add('attribute');
         node.leftSide[i].circle.onactivation = this.handleLabelActivation.bind(this, node, node.leftSide[i]);
-        node.rightSide[i].circle.classList.add('blue');
+        node.rightSide[i].circle.classList.add('value');
         node.rightSide[i].circle.onactivation = this.handleLabelActivation.bind(this, node, node.rightSide[i]);
     }
     this.syncNodeLabels(node);
 };
 
 module.exports.prototype.hideSymbol = function(symbol) {
-    node = this.nodeIndex.get(symbol);
+    var node = this.nodeIndex.get(symbol);
     this.nodeIndex.delete(symbol);
     this.linkedBoxes.delete(node);
 };
@@ -76,18 +76,18 @@ module.exports.prototype.handleLabelActivation = function(node, segment) {
 };
 
 module.exports.prototype.linkSymbolsAndSyncGraph = function() {
-    for(pair of this.nodeIndex) {
-        node = pair[1];
+    for(var pair of this.nodeIndex) {
+        var node = pair[1];
         for(var i = 0; i < node.leftSide.length; ++i) {
-            segment = node.leftSide[i];
-            if(segment.circle.linksPerNode.size == 0 && this.nodeIndex.has(segment.symbol)) {
-                link = this.linkedBoxes.createLinkHelper(node, this.nodeIndex.get(segment.symbol), -i-1, 0);
-                link.path.classList.add('green');
+            var leftSegment = node.leftSide[i],
+                  rightSegment = node.rightSide[i];
+            if(leftSegment.circle.linksPerNode.size == 0 && this.nodeIndex.has(leftSegment.symbol)) {
+                var link = this.linkedBoxes.createLinkHelper(node, this.nodeIndex.get(leftSegment.symbol), -i-1, 0);
+                link.path.classList.add('attribute');
             }
-            segment = node.rightSide[i];
-            if(segment.circle.linksPerNode.size == 0 && this.nodeIndex.has(segment.symbol)) {
-                link = this.linkedBoxes.createLinkHelper(node, this.nodeIndex.get(segment.symbol), i+1, 0);
-                link.path.classList.add('blue');
+            if(rightSegment.circle.linksPerNode.size == 0 && this.nodeIndex.has(rightSegment.symbol)) {
+                var link = this.linkedBoxes.createLinkHelper(node, this.nodeIndex.get(rightSegment.symbol), i+1, 0);
+                link.path.classList.add('value');
             }
         }
     }
@@ -193,7 +193,7 @@ module.exports = function(parentElement) {
     this.svg.parentNode.onmousemove = function(event) {
         if(!this.nodeToDrag)
             return true;
-        rect = this.svg.getBoundingClientRect();
+        var rect = this.svg.getBoundingClientRect();
         this.nodeToDrag.px = event.pageX-rect.left-window.pageXOffset+this.config.nodeMargin/2;
         this.nodeToDrag.py = event.pageY-rect.top-window.pageYOffset+this.config.nodeMargin/2;
         this.tickGraph();
@@ -213,38 +213,36 @@ module.exports = function(parentElement) {
         return this.svg.parentNode.onmouseup(event.touches[0]);
     }.bind(this);
 
-    svgDefs = this.createElement('defs', this.svg);
-    /* arrowMarker = this.createElement('marker', svgDefs);
+    var svgDefs = this.createElement('defs', this.svg);
+    /* var arrowMarker = this.createElement('marker', svgDefs);
     arrowMarker.setAttribute('id', 'arrowMarker');
     arrowMarker.setAttribute('refX', 6);
     arrowMarker.setAttribute('refY', 3);
     arrowMarker.setAttribute('markerWidth', 7);
     arrowMarker.setAttribute('markerHeight', 6);
     arrowMarker.setAttribute('orient', 'auto');
-    arrowPath = this.createElement('path', arrowMarker);
+    var arrowPath = this.createElement('path', arrowMarker);
     arrowPath.setAttribute('d', 'M0,1L5,3L0,5z'); */
 
-    blurFilter = this.createElement('filter', svgDefs);
+    var blurFilter = this.createElement('filter', svgDefs);
     blurFilter.setAttribute('id', 'blurFilter');
     blurFilter.setAttribute('x', -0.5);
     blurFilter.setAttribute('y', -0.5);
     blurFilter.setAttribute('width', 4);
     blurFilter.setAttribute('height', 4);
-    feGaussianBlur = this.createElement('feGaussianBlur', blurFilter);
+    var feGaussianBlur = this.createElement('feGaussianBlur', blurFilter);
     feGaussianBlur.setAttribute('in', 'SourceGraphic');
     feGaussianBlur.setAttribute('result', 'blur');
     feGaussianBlur.setAttribute('stdDeviation', 3);
-    feComponentTransfer = this.createElement('feComponentTransfer', blurFilter);
+    var feComponentTransfer = this.createElement('feComponentTransfer', blurFilter);
     feComponentTransfer.setAttribute('in', 'blur');
     feComponentTransfer.setAttribute('result', 'brighter');
-    feFunc = this.createElement('feFuncA', feComponentTransfer);
+    var feFunc = this.createElement('feFuncA', feComponentTransfer);
     feFunc.setAttribute('type', 'linear');
-    feFunc.setAttribute('slope', 4);
-    feMerge = this.createElement('feMerge', blurFilter);
-    feMergeNode = this.createElement('feMergeNode', feMerge);
-    feMergeNode.setAttribute('in', 'brighter');
-    feMergeNode = this.createElement('feMergeNode', feMerge);
-    feMergeNode.setAttribute('in', 'SourceGraphic');
+    feFunc.setAttribute('slope', 2.5);
+    var feMerge = this.createElement('feMerge', blurFilter);
+    this.createElement('feMergeNode', feMerge).setAttribute('in', 'brighter');
+    this.createElement('feMergeNode', feMerge).setAttribute('in', 'SourceGraphic');
 
     this.layoutEngine = new colaLayout()
         .linkDistance(150)
@@ -267,11 +265,9 @@ module.exports.prototype.config = {
 module.exports.prototype.deleteCircle = function(circle) {
     if(this.cursorCircle == circle)
         this.cursorNode = undefined;
-    for(pair of circle.linksPerNode) {
-        set = pair[1];
-        for(link of set)
+    for(var pair of circle.linksPerNode)
+        for(var link of pair[1])
             link.deathFlag = true;
-    }
 };
 
 module.exports.prototype.tickCircle = function(posX, posY, element) {
@@ -289,7 +285,7 @@ module.exports.prototype.tickGraph = function() {
 
     var trash = new Set;
     for(var j = 0; j < this.nodes.length; ++j) {
-        node = this.nodes[j];
+        var node = this.nodes[j];
         if(node.deathFlag) {
             if(node.circle)
                 this.deleteCircle(node.circle);
@@ -303,8 +299,8 @@ module.exports.prototype.tickGraph = function() {
             --j;
             continue;
         }
-        posX = node.x-node.width/2;
-        posY = node.y-node.height/2;
+        var posX = node.x-node.width/2,
+              posY = node.y-node.height/2;
         node.group.setAttribute('transform', 'translate('+posX+', '+posY+')');
         if(node.circle)
             this.tickCircle(posX, posY, node.circle);
@@ -314,7 +310,7 @@ module.exports.prototype.tickGraph = function() {
             this.tickCircle(posX, posY, node.rightSide[i].circle);
     }
 
-    for(link of this.links) {
+    for(var link of this.links) {
         if(link.deathFlag) {
             this.dirtyFlag = true;
             trash.add(link.path);
@@ -330,103 +326,104 @@ module.exports.prototype.tickGraph = function() {
         switch(this.config.linkStyle) {
             case 'straight':
                 link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'L'+link.dstCircle.x+','+link.dstCircle.y);
-            break;
+                break;
             case 'vertical':
                 link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.dstCircle.x+','+link.srcCircle.y+' '+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
-            break;
+                break;
             case 'horizontal':
                 link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.srcCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
-            break;
+                break;
             case 'hybrid':
                 if(Math.abs(link.srcCircle.x-link.dstCircle.x) < Math.abs(link.srcCircle.y-link.dstCircle.y))
                     link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.dstCircle.x+','+link.srcCircle.y+' '+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
                 else
                     link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.srcCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
-            break;
+                    break;
             case 'gravity':
-                diffX = link.dstCircle.x-link.srcCircle.x;
-                maxY = Math.max(link.dstCircle.y, link.srcCircle.y)+20;
+                var diffX = link.dstCircle.x-link.srcCircle.x;
+                var maxY = Math.max(link.dstCircle.y, link.srcCircle.y)+20;
                 link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+(link.srcCircle.x+diffX*0.25)+','+maxY+' '+(link.srcCircle.x+diffX*0.75)+','+maxY+' '+link.dstCircle.x+','+link.dstCircle.y);
-            break;
+                break;
         }
     }
 
-    for(element of trash) {
+    for(var element of trash) {
         element.classList.remove('fadeIn');
         element.classList.add('fadeOut');
     }
     window.setTimeout(function() {
-        for(element of trash)
-            this.svg.removeChild(element);
+        for(var element of trash)
+            element.parentNode.removeChild(element);
     }.bind(this), 250);
 
     this.syncGraph();
 };
 
 module.exports.prototype.handleKeyboard = function(event) {
-    if(!this.cursorNode)
+    if(!this.cursorNode || !this.svg.offsetParent)
         return;
+    event.stopPropagation();
     if(event.keyCode == 13 && this.cursorCircle.onactivation) {
         this.cursorCircle.onactivation(event);
         return false;
     }
-    index = this.getIndexOfCircle(this.cursorNode, this.cursorCircle);
+    var index = this.getIndexOfCircle(this.cursorNode, this.cursorCircle);
     if(index < 0) {
         switch(event.keyCode) {
             case 37:
                 this.cursorFollowLink();
-            return false;
+                return false;
             case 38:
                 this.setCursorIndex(index+1);
-            return false;
+                return false;
             case 39:
                 this.setCursorIndex(-index);
-            return false;
+                return false;
             case 40:
                 this.setCursorIndex(index-1);
-            return false;
+                return false;
         }
     } else if(index > 0) {
         switch(event.keyCode) {
             case 37:
                 this.setCursorIndex(-index);
-            return false;
+                return false;
             case 38:
                 this.setCursorIndex(index-1);
-            return false;
+                return false;
             case 39:
                 this.cursorFollowLink();
-            return false;
+                return false;
             case 40:
                 this.setCursorIndex(index+1);
-            return false;
+                return false;
         }
     } else {
         switch(event.keyCode) {
             case 37:
                 this.setCursorIndex(index-1);
-            return false;
+                return false;
             case 38:
                 this.cursorFollowLink();
-            return false;
+                return false;
             case 39:
                 this.setCursorIndex(index+1);
-            return false;
+                return false;
             case 40:
-            return false;
+                return false;
         }
     }
     return true;
 };
 
 module.exports.prototype.createElement = function(tag, parentNode) {
-    element = document.createElementNS(this.svg.namespaceURI, tag);
+    var element = document.createElementNS(this.svg.namespaceURI, tag);
     parentNode.appendChild(element);
     return element;
 };
 
 module.exports.prototype.setActivationHandlers = function(element) {
-    activation = function(event) {
+    var activation = function(event) {
         if(element.onactivation)
             element.onactivation(event);
         return false;
@@ -437,7 +434,7 @@ module.exports.prototype.setActivationHandlers = function(element) {
 
 module.exports.prototype.syncNodeSide = function(width, side, isLeft) {
     for(var i = 0; i < side.length; ++i) {
-        segment = side[i];
+        var segment = side[i];
         if(segment.deathFlag) {
             this.deleteCircle(segment.circle);
             side.group.removeChild(side.group.childNodes[i*2+1]);
@@ -457,7 +454,7 @@ module.exports.prototype.syncNodeSide = function(width, side, isLeft) {
             segment.label.textContent = 'undefined';
             this.setActivationHandlers(segment.label);
         }
-        posY = (i+1)*this.config.nodePadding*2;
+        var posY = (i+1)*this.config.nodePadding*2;
 
         segment.circle.x = Math.round((isLeft) ? this.config.nodePadding : width-this.config.nodePadding);
         segment.circle.y = Math.round(posY+this.config.nodePadding);
@@ -470,9 +467,9 @@ module.exports.prototype.syncNodeSide = function(width, side, isLeft) {
 };
 
 module.exports.prototype.syncNode = function(node) {
-    segmentCount = Math.max(node.leftSide.length, node.rightSide.length);
-    width = 200;
-    height = (segmentCount+1)*this.config.nodePadding*2;
+    var segmentCount = Math.max(node.leftSide.length, node.rightSide.length);
+    var width = 200;
+    var height = (segmentCount+1)*this.config.nodePadding*2;
 
     if(!node.group) {
         node.group = this.createElement('g', this.svg);
@@ -518,7 +515,7 @@ module.exports.prototype.syncNode = function(node) {
 
     node.rect.setAttribute('width', width);
     node.rect.setAttribute('height', height);
-    halfWidth = Math.round(width/2);
+    var halfWidth = Math.round(width/2);
     if(node.circle)
         node.circle.setAttribute('cx', halfWidth);
     node.label.setAttribute('x', halfWidth);
@@ -531,7 +528,7 @@ module.exports.prototype.syncNode = function(node) {
         node.lines.splice(segmentCount);
 
         for(var i = node.lines.group.childNodes.length; i < segmentCount; ++i) {
-            posY = (i+1)*this.config.nodePadding*2;
+            var posY = (i+1)*this.config.nodePadding*2;
             node.lines[i] = this.createElement('path', node.lines.group);
             node.lines[i].setAttribute('d', 'M0,'+posY+'h'+width);
         }
@@ -551,7 +548,7 @@ module.exports.prototype.initializeNode = function(node) {
 };
 
 module.exports.prototype.createNodeHelper = function(segementsLeft, segementsRight) {
-    node = {};
+    var node = {};
     node.leftSide = Array(segementsLeft);
     for(var i = 0; i < segementsLeft; ++i)
         node.leftSide[i] = {};
@@ -592,7 +589,7 @@ module.exports.prototype.getIndexOfCircle = function(node, circle) {
 };
 
 module.exports.prototype.linkNodes = function(srcNode, dstNode) {
-    entry = srcNode.sharedLinksPerNode.get(dstNode);
+    var entry = srcNode.sharedLinksPerNode.get(dstNode);
     if(entry)
         ++entry.arc;
     else {
@@ -603,7 +600,7 @@ module.exports.prototype.linkNodes = function(srcNode, dstNode) {
 };
 
 module.exports.prototype.unlinkNodes = function(srcNode, dstNode) {
-    entry = srcNode.sharedLinksPerNode.get(dstNode);
+    var entry = srcNode.sharedLinksPerNode.get(dstNode);
     if(entry.arc > 1)
         --entry.arc;
     else {
@@ -614,7 +611,7 @@ module.exports.prototype.unlinkNodes = function(srcNode, dstNode) {
 };
 
 module.exports.prototype.linkCircle = function(link, srcCircle, dstNode) {
-    set = undefined;
+    var set = undefined;
     if(!srcCircle.linksPerNode.has(dstNode)) {
         set = new Set;
         srcCircle.linksPerNode.set(dstNode, set);
@@ -630,7 +627,7 @@ module.exports.prototype.linkCircle = function(link, srcCircle, dstNode) {
 module.exports.prototype.unlinkCircle = function(link, srcCircle, dstNode) {
     if(!srcCircle.linksPerNode.has(dstNode))
         return false;
-    set = srcCircle.linksPerNode.get(dstNode);
+    var set = srcCircle.linksPerNode.get(dstNode);
     if(!set.has(link))
         return false;
     set.delete(link);
@@ -645,8 +642,9 @@ module.exports.prototype.initializeLink = function(link) {
     this.linkCircle(link, link.dstCircle, link.srcNode);
     link.path = this.createElement('path', this.svg);
     link.path.classList.add('link');
+    link.path.classList.add('fadeIn');
     if(link.srcNode != link.dstNode) {
-        entry = this.linkNodes(link.srcNode, link.dstNode);
+        var entry = this.linkNodes(link.srcNode, link.dstNode);
         this.linkNodes(link.dstNode, link.srcNode);
         if(entry.arc == 1) {
             entry.link = {source:link.srcNode, target:link.dstNode};
@@ -664,7 +662,7 @@ module.exports.prototype.delete = function(element) {
 };
 
 module.exports.prototype.createLinkHelper = function(srcNode, dstNode, srcIndex, dstIndex) {
-    link = {};
+    var link = {};
     link.srcNode = srcNode;
     link.dstNode = dstNode;
     link.srcCircle = this.getCircleAtIndex(link.srcNode, srcIndex);
@@ -676,7 +674,7 @@ module.exports.prototype.syncGraph = function() {
     if(!this.dirtyFlag)
         return;
     this.dirtyFlag = false;
-    rect = this.svg.getBoundingClientRect();
+    var rect = this.svg.getBoundingClientRect();
     this.layoutEngine.size([rect.width, rect.height]);
     this.layoutEngine.start();
     this.tickGraph();
@@ -700,10 +698,10 @@ module.exports.prototype.setCursorIndex = function(index) {
 module.exports.prototype.cursorFollowLink = function() {
     if(!this.cursorNode || this.cursorCircle.linksPerNode.size != 1)
         return false;
-    set = this.cursorCircle.linksPerNode.values().next().value;
+    var set = this.cursorCircle.linksPerNode.values().next().value;
     if(set.size != 1)
         return false;
-    link = set.values().next().value;
+    var link = set.values().next().value;
     this.cursorNode = (this.cursorNode == link.srcNode) ? link.dstNode : link.srcNode;
     this.setCursorCircle((this.cursorCircle == link.srcCircle) ? link.dstCircle : link.srcCircle);
     return true;
@@ -5422,7 +5420,7 @@ var cola;
             this.descent = new cola.Descent(this.result, D);
             this.descent.threshold = 1e-3;
             this.descent.G = G;
-            //let constraints = this.links.map(e=> <any>{
+            //var constraints = this.links.map(e=> <any>{
             //    axis: 'y', left: e.source, right: e.target, gap: e.length*1.5
             //});
             if (this.constraints)
