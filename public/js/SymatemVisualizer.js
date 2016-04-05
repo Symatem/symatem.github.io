@@ -1,14 +1,14 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var LinkedBoxes = require('LinkedBoxes');
+var WiredPanels = require('WiredPanels');
 
 module.exports = function(element) {
-    this.linkedBoxes = new LinkedBoxes(element);
-    this.nodeIndex = new Map;
+    this.wiredPanels = new WiredPanels(element);
+    this.panelIndex = new Map;
 
     this.showSymbol(1485);
-    this.linkSymbolsAndSyncGraph();
-    this.linkedBoxes.cursorNode = this.linkedBoxes.nodes[0];
-    this.linkedBoxes.setCursorIndex(0);
+    this.wireSymbolsAndSyncGraph();
+    this.wiredPanels.cursorPanel = this.wiredPanels.panels[0];
+    this.wiredPanels.setCursorIndex(0);
 }
 
 module.exports.prototype.syncLabel = function(label, symbol) {
@@ -22,76 +22,76 @@ module.exports.prototype.syncLabel = function(label, symbol) {
     }
 };
 
-module.exports.prototype.syncNodeLabels = function(node) {
-    this.syncLabel(node.label, node.symbol);
-    for(var i = 0; i < node.leftSide.length; ++i) {
-        this.syncLabel(node.leftSide[i].label, node.leftSide[i].symbol);
-        this.syncLabel(node.rightSide[i].label, node.rightSide[i].symbol);
+module.exports.prototype.syncPanelLabels = function(panel) {
+    this.syncLabel(panel.label, panel.symbol);
+    for(var i = 0; i < panel.leftSide.length; ++i) {
+        this.syncLabel(panel.leftSide[i].label, panel.leftSide[i].symbol);
+        this.syncLabel(panel.rightSide[i].label, panel.rightSide[i].symbol);
     }
 };
 
 module.exports.prototype.showSymbol = function(symbol) {
-    var node = {leftSide:[], rightSide:[], symbol:symbol};
+    var panel = {leftSide:[], rightSide:[], symbol:symbol};
     for(var i = 0; i < this.data.triples.length; ++i) {
         if(this.data.triples[i][0] != symbol)
             continue;
-        node.leftSide.push({symbol:this.data.triples[i][1]});
-        node.rightSide.push({symbol:this.data.triples[i][2]});
+        panel.leftSide.push({symbol:this.data.triples[i][1]});
+        panel.rightSide.push({symbol:this.data.triples[i][2]});
     }
-    this.linkedBoxes.initializeNode(node);
-    this.nodeIndex.set(symbol, node);
-    for(var i = 0; i < node.lines.length; ++i)
-        node.lines[i].classList.add('entity');
-    node.rect.classList.add('entity');
-    node.circle.classList.add('entity');
-    node.circle.onactivation = this.handleLabelActivation.bind(this, node, node);
-    for(var i = 0; i < node.leftSide.length; ++i) {
-        node.leftSide[i].circle.classList.add('attribute');
-        node.leftSide[i].circle.onactivation = this.handleLabelActivation.bind(this, node, node.leftSide[i]);
-        node.rightSide[i].circle.classList.add('value');
-        node.rightSide[i].circle.onactivation = this.handleLabelActivation.bind(this, node, node.rightSide[i]);
+    this.wiredPanels.initializePanel(panel);
+    this.panelIndex.set(symbol, panel);
+    for(var i = 0; i < panel.lines.length; ++i)
+        panel.lines[i].classList.add('entity');
+    panel.rect.classList.add('entity');
+    panel.socket.classList.add('entity');
+    panel.socket.onactivation = this.handleLabelActivation.bind(this, panel, panel);
+    for(var i = 0; i < panel.leftSide.length; ++i) {
+        panel.leftSide[i].socket.classList.add('attribute');
+        panel.leftSide[i].socket.onactivation = this.handleLabelActivation.bind(this, panel, panel.leftSide[i]);
+        panel.rightSide[i].socket.classList.add('value');
+        panel.rightSide[i].socket.onactivation = this.handleLabelActivation.bind(this, panel, panel.rightSide[i]);
     }
-    this.syncNodeLabels(node);
+    this.syncPanelLabels(panel);
 };
 
 module.exports.prototype.hideSymbol = function(symbol) {
-    var node = this.nodeIndex.get(symbol);
-    this.nodeIndex.delete(symbol);
-    this.linkedBoxes.delete(node);
+    var panel = this.panelIndex.get(symbol);
+    this.panelIndex.delete(symbol);
+    this.wiredPanels.delete(panel);
 };
 
-module.exports.prototype.handleLabelActivation = function(node, segment) {
-    if(node == segment) {
-        this.linkedBoxes.cursorNode = node;
-        this.linkedBoxes.setCursorIndex(0);
+module.exports.prototype.handleLabelActivation = function(panel, segment) {
+    if(panel == segment) {
+        this.wiredPanels.cursorPanel = panel;
+        this.wiredPanels.setCursorIndex(0);
         return;
     }
-    if(this.nodeIndex.has(segment.symbol)) {
+    if(this.panelIndex.has(segment.symbol)) {
         this.hideSymbol(segment.symbol);
-        this.linkedBoxes.syncGraph();
+        this.wiredPanels.syncGraph();
     } else {
         this.showSymbol(segment.symbol);
-        this.linkSymbolsAndSyncGraph();
+        this.wireSymbolsAndSyncGraph();
     }
 };
 
-module.exports.prototype.linkSymbolsAndSyncGraph = function() {
-    for(var pair of this.nodeIndex) {
-        var node = pair[1];
-        for(var i = 0; i < node.leftSide.length; ++i) {
-            var leftSegment = node.leftSide[i],
-                  rightSegment = node.rightSide[i];
-            if(leftSegment.circle.linksPerNode.size == 0 && this.nodeIndex.has(leftSegment.symbol)) {
-                var link = this.linkedBoxes.createLinkHelper(node, this.nodeIndex.get(leftSegment.symbol), -i-1, 0);
-                link.path.classList.add('attribute');
+module.exports.prototype.wireSymbolsAndSyncGraph = function() {
+    for(var pair of this.panelIndex) {
+        var panel = pair[1];
+        for(var i = 0; i < panel.leftSide.length; ++i) {
+            var leftSegment = panel.leftSide[i],
+                  rightSegment = panel.rightSide[i];
+            if(leftSegment.socket.wiresPerPanel.size == 0 && this.panelIndex.has(leftSegment.symbol)) {
+                var wire = this.wiredPanels.createWireHelper(panel, this.panelIndex.get(leftSegment.symbol), -i-1, 0);
+                wire.path.classList.add('attribute');
             }
-            if(rightSegment.circle.linksPerNode.size == 0 && this.nodeIndex.has(rightSegment.symbol)) {
-                var link = this.linkedBoxes.createLinkHelper(node, this.nodeIndex.get(rightSegment.symbol), i+1, 0);
-                link.path.classList.add('value');
+            if(rightSegment.socket.wiresPerPanel.size == 0 && this.panelIndex.has(rightSegment.symbol)) {
+                var wire = this.wiredPanels.createWireHelper(panel, this.panelIndex.get(rightSegment.symbol), i+1, 0);
+                wire.path.classList.add('value');
             }
         }
     }
-    this.linkedBoxes.syncGraph();
+    this.wiredPanels.syncGraph();
 };
 
 module.exports.prototype.data = {
@@ -182,20 +182,20 @@ module.exports.prototype.data = {
 
 new module.exports(document.currentScript.parentNode);
 
-},{"LinkedBoxes":2}],2:[function(require,module,exports){
+},{"WiredPanels":2}],2:[function(require,module,exports){
 var colaLayout = require('webcola').Layout;
 
 module.exports = function(parentElement) {
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     parentElement.appendChild(this.svg);
-    this.svg.parentNode.classList.add('LinkedBoxes');
+    this.svg.parentNode.classList.add('WiredPanels');
     document.body.onkeydown = this.handleKeyboard.bind(this);
     this.svg.parentNode.onmousemove = function(event) {
-        if(!this.nodeToDrag)
+        if(!this.panelToDrag)
             return true;
         var rect = this.svg.getBoundingClientRect();
-        this.nodeToDrag.px = event.pageX-rect.left-window.pageXOffset+this.config.nodeMargin/2;
-        this.nodeToDrag.py = event.pageY-rect.top-window.pageYOffset+this.config.nodeMargin/2;
+        this.panelToDrag.px = event.pageX-rect.left-window.pageXOffset+this.config.panelMargin/2;
+        this.panelToDrag.py = event.pageY-rect.top-window.pageYOffset+this.config.panelMargin/2;
         this.tickGraph();
         return false;
     }.bind(this);
@@ -203,16 +203,18 @@ module.exports = function(parentElement) {
         return this.svg.parentNode.onmousemove(event.touches[0]);
     }.bind(this);
     this.svg.parentNode.onmouseup = function(event) {
-        if(!this.nodeToDrag)
+        if(!this.panelToDrag)
             return true;
-        colaLayout.dragEnd(this.nodeToDrag);
-        this.nodeToDrag = undefined;
+        colaLayout.dragEnd(this.panelToDrag);
+        this.panelToDrag = undefined;
         return false;
     }.bind(this);
     this.svg.parentNode.ontouchend = function(event) {
         return this.svg.parentNode.onmouseup(event.touches[0]);
     }.bind(this);
 
+    this.panelsGroup = this.createElement('g', this.svg);
+    this.wiresGroup = this.createElement('g', this.svg);
     var svgDefs = this.createElement('defs', this.svg);
     /* var arrowMarker = this.createElement('marker', svgDefs);
     arrowMarker.setAttribute('id', 'arrowMarker');
@@ -245,32 +247,33 @@ module.exports = function(parentElement) {
     this.createElement('feMergeNode', feMerge).setAttribute('in', 'SourceGraphic');
 
     this.layoutEngine = new colaLayout()
-        .linkDistance(150)
+        .linkDistance(this.config.panelDistance)
         .avoidOverlaps(true);
-    this.nodes = this.layoutEngine._nodes;
-    this.links = new Set;
+    this.panels = this.layoutEngine._nodes;
+    this.wires = new Set;
 };
 
 module.exports.prototype.config = {
-    nodeMargin: 24,
-    nodePadding: 12,
-    nodeCornerRadius: 10,
-    circleRadius: 5,
+    panelDistance: 150,
+    panelMargin: 24,
+    panelPadding: 12,
+    panelCornerRadius: 10,
+    socketRadius: 5,
     fontSize: 12,
-    linkStyle: 'hybrid',
-    headCircle: true,
+    wireStyle: 'hybrid',
+    headSocket: true,
     segmentLines: true
 };
 
-module.exports.prototype.deleteCircle = function(circle) {
-    if(this.cursorCircle == circle)
-        this.cursorNode = undefined;
-    for(var pair of circle.linksPerNode)
-        for(var link of pair[1])
-            link.deathFlag = true;
+module.exports.prototype.deleteSocket = function(socket) {
+    if(this.cursorSocket == socket)
+        this.cursorPanel = undefined;
+    for(var pair of socket.wiresPerPanel)
+        for(var wire of pair[1])
+            wire.deathFlag = true;
 };
 
-module.exports.prototype.tickCircle = function(posX, posY, element) {
+module.exports.prototype.tickSocket = function(posX, posY, element) {
     element.x = posX+parseInt(element.getAttribute('cx'));
     element.y = posY+parseInt(element.getAttribute('cy'));
 };
@@ -284,65 +287,65 @@ module.exports.prototype.tickGraph = function() {
             break;
 
     var trash = new Set;
-    for(var j = 0; j < this.nodes.length; ++j) {
-        var node = this.nodes[j];
-        if(node.deathFlag) {
-            if(node.circle)
-                this.deleteCircle(node.circle);
-            for(var i = 0; i < node.leftSide.length; ++i)
-                this.deleteCircle(node.leftSide[i].circle);
-            for(var i = 0; i < node.rightSide.length; ++i)
-                this.deleteCircle(node.rightSide[i].circle);
+    for(var j = 0; j < this.panels.length; ++j) {
+        var panel = this.panels[j];
+        if(panel.deathFlag) {
+            if(panel.socket)
+                this.deleteSocket(panel.socket);
+            for(var i = 0; i < panel.leftSide.length; ++i)
+                this.deleteSocket(panel.leftSide[i].socket);
+            for(var i = 0; i < panel.rightSide.length; ++i)
+                this.deleteSocket(panel.rightSide[i].socket);
             this.dirtyFlag = true;
-            trash.add(node.group);
-            this.nodes.splice(j, 1);
+            trash.add(panel.group);
+            this.panels.splice(j, 1);
             --j;
             continue;
         }
-        var posX = node.x-node.width/2,
-              posY = node.y-node.height/2;
-        node.group.setAttribute('transform', 'translate('+posX+', '+posY+')');
-        if(node.circle)
-            this.tickCircle(posX, posY, node.circle);
-        for(var i = 0; i < node.leftSide.length; ++i)
-            this.tickCircle(posX, posY, node.leftSide[i].circle);
-        for(var i = 0; i < node.rightSide.length; ++i)
-            this.tickCircle(posX, posY, node.rightSide[i].circle);
+        var posX = panel.x-panel.width/2,
+              posY = panel.y-panel.height/2;
+        panel.group.setAttribute('transform', 'translate('+posX+', '+posY+')');
+        if(panel.socket)
+            this.tickSocket(posX, posY, panel.socket);
+        for(var i = 0; i < panel.leftSide.length; ++i)
+            this.tickSocket(posX, posY, panel.leftSide[i].socket);
+        for(var i = 0; i < panel.rightSide.length; ++i)
+            this.tickSocket(posX, posY, panel.rightSide[i].socket);
     }
 
-    for(var link of this.links) {
-        if(link.deathFlag) {
+    for(var wire of this.wires) {
+        if(wire.deathFlag) {
             this.dirtyFlag = true;
-            trash.add(link.path);
-            this.unlinkCircle(link, link.srcCircle, link.dstNode);
-            this.unlinkCircle(link, link.dstCircle, link.srcNode);
-            if(link.srcNode != link.dstNode) {
-                this.unlinkNodes(link.srcNode, link.dstNode);
-                this.unlinkNodes(link.dstNode, link.srcNode);
+            trash.add(wire.path);
+            this.disconnectSockets(wire, wire.srcSocket, wire.dstPanel);
+            this.disconnectSockets(wire, wire.dstSocket, wire.srcPanel);
+            if(wire.srcPanel != wire.dstPanel) {
+                this.disconnectPanels(wire.srcPanel, wire.dstPanel);
+                this.disconnectPanels(wire.dstPanel, wire.srcPanel);
             }
-            this.links.delete(link);
+            this.wires.delete(wire);
             continue;
         }
-        switch(this.config.linkStyle) {
+        switch(this.config.wireStyle) {
             case 'straight':
-                link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'L'+link.dstCircle.x+','+link.dstCircle.y);
+                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'L'+wire.dstSocket.x+','+wire.dstSocket.y);
                 break;
             case 'vertical':
-                link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.dstCircle.x+','+link.srcCircle.y+' '+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
+                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
                 break;
             case 'horizontal':
-                link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.srcCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
+                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
                 break;
             case 'hybrid':
-                if(Math.abs(link.srcCircle.x-link.dstCircle.x) < Math.abs(link.srcCircle.y-link.dstCircle.y))
-                    link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.dstCircle.x+','+link.srcCircle.y+' '+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
+                if(Math.abs(wire.srcSocket.x-wire.dstSocket.x) < Math.abs(wire.srcSocket.y-wire.dstSocket.y))
+                    wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
                 else
-                    link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+link.srcCircle.x+','+link.dstCircle.y+' '+link.dstCircle.x+','+link.srcCircle.y+' '+link.dstCircle.x+','+link.dstCircle.y);
+                    wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
                     break;
             case 'gravity':
-                var diffX = link.dstCircle.x-link.srcCircle.x;
-                var maxY = Math.max(link.dstCircle.y, link.srcCircle.y)+20;
-                link.path.setAttribute('d', 'M'+link.srcCircle.x+','+link.srcCircle.y+'C'+(link.srcCircle.x+diffX*0.25)+','+maxY+' '+(link.srcCircle.x+diffX*0.75)+','+maxY+' '+link.dstCircle.x+','+link.dstCircle.y);
+                var diffX = wire.dstSocket.x-wire.srcSocket.x;
+                var maxY = Math.max(wire.dstSocket.y, wire.srcSocket.y)+20;
+                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+(wire.srcSocket.x+diffX*0.25)+','+maxY+' '+(wire.srcSocket.x+diffX*0.75)+','+maxY+' '+wire.dstSocket.x+','+wire.dstSocket.y);
                 break;
         }
     }
@@ -360,18 +363,19 @@ module.exports.prototype.tickGraph = function() {
 };
 
 module.exports.prototype.handleKeyboard = function(event) {
-    if(!this.cursorNode || !this.svg.offsetParent)
+    var rect = this.svg.getBoundingClientRect();
+    if(!this.cursorPanel || rect.width == 0 || rect.height == 0)
         return;
     event.stopPropagation();
-    if(event.keyCode == 13 && this.cursorCircle.onactivation) {
-        this.cursorCircle.onactivation(event);
+    if(event.keyCode == 13 && this.cursorSocket.onactivation) {
+        this.cursorSocket.onactivation(event);
         return false;
     }
-    var index = this.getIndexOfCircle(this.cursorNode, this.cursorCircle);
+    var index = this.getIndexOfSocket(this.cursorPanel, this.cursorSocket);
     if(index < 0) {
         switch(event.keyCode) {
             case 37:
-                this.cursorFollowLink();
+                this.cursorFollowWire();
                 return false;
             case 38:
                 this.setCursorIndex(index+1);
@@ -392,7 +396,7 @@ module.exports.prototype.handleKeyboard = function(event) {
                 this.setCursorIndex(index-1);
                 return false;
             case 39:
-                this.cursorFollowLink();
+                this.cursorFollowWire();
                 return false;
             case 40:
                 this.setCursorIndex(index+1);
@@ -404,7 +408,7 @@ module.exports.prototype.handleKeyboard = function(event) {
                 this.setCursorIndex(index-1);
                 return false;
             case 38:
-                this.cursorFollowLink();
+                this.cursorFollowWire();
                 return false;
             case 39:
                 this.setCursorIndex(index+1);
@@ -432,11 +436,11 @@ module.exports.prototype.setActivationHandlers = function(element) {
     element.ontouchstart = activation;
 };
 
-module.exports.prototype.syncNodeSide = function(width, side, isLeft) {
+module.exports.prototype.syncPanelSide = function(width, side, isLeft) {
     for(var i = 0; i < side.length; ++i) {
         var segment = side[i];
         if(segment.deathFlag) {
-            this.deleteCircle(segment.circle);
+            this.deleteSocket(segment.socket);
             side.group.removeChild(side.group.childNodes[i*2+1]);
             side.group.removeChild(side.group.childNodes[i*2]);
             side.splice(i, 1);
@@ -444,216 +448,220 @@ module.exports.prototype.syncNodeSide = function(width, side, isLeft) {
             continue;
         }
 
-        if(!segment.circle) {
-            segment.circle = this.createElement('circle', side.group);
-            segment.circle.linksPerNode = new Map;
-            segment.circle.setAttribute('r', this.config.circleRadius);
-            this.setActivationHandlers(segment.circle);
+        if(!segment.socket) {
+            segment.socket = this.createElement('circle', side.group);
+            segment.socket.classList.add('socket');
+            segment.socket.wiresPerPanel = new Map;
+            segment.socket.setAttribute('r', this.config.socketRadius);
+            this.setActivationHandlers(segment.socket);
             segment.label = this.createElement('text', side.group);
             segment.label.setAttribute('text-anchor', (isLeft) ? 'start' : 'end');
             segment.label.textContent = 'undefined';
             this.setActivationHandlers(segment.label);
         }
-        var posY = (i+1)*this.config.nodePadding*2;
+        var posY = (i+1)*this.config.panelPadding*2;
 
-        segment.circle.x = Math.round((isLeft) ? this.config.nodePadding : width-this.config.nodePadding);
-        segment.circle.y = Math.round(posY+this.config.nodePadding);
-        segment.circle.setAttribute('cx', segment.circle.x);
-        segment.circle.setAttribute('cy', segment.circle.y);
+        segment.socket.x = Math.round((isLeft) ? this.config.panelPadding : width-this.config.panelPadding);
+        segment.socket.y = Math.round(posY+this.config.panelPadding);
+        segment.socket.setAttribute('cx', segment.socket.x);
+        segment.socket.setAttribute('cy', segment.socket.y);
 
-        segment.label.setAttribute('x', Math.round((isLeft) ? this.config.nodePadding*2 : width-this.config.nodePadding*2));
-        segment.label.setAttribute('y', Math.round(posY+this.config.nodePadding+this.config.fontSize*0.4));
+        segment.label.setAttribute('x', Math.round((isLeft) ? this.config.panelPadding*2 : width-this.config.panelPadding*2));
+        segment.label.setAttribute('y', Math.round(posY+this.config.panelPadding+this.config.fontSize*0.4));
     }
 };
 
-module.exports.prototype.syncNode = function(node) {
-    var segmentCount = Math.max(node.leftSide.length, node.rightSide.length);
+module.exports.prototype.syncPanel = function(panel) {
+    var segmentCount = Math.max(panel.leftSide.length, panel.rightSide.length);
     var width = 200;
-    var height = (segmentCount+1)*this.config.nodePadding*2;
+    var height = (segmentCount+1)*this.config.panelPadding*2;
 
-    if(!node.group) {
-        node.group = this.createElement('g', this.svg);
-        node.group.classList.add('fadeIn');
+    if(!panel.group) {
+        panel.group = this.createElement('g', this.panelsGroup);
+        panel.group.classList.add('fadeIn');
 
-        node.group.onmousedown = function(event) {
-            this.nodeToDrag = node;
-            colaLayout.dragStart(node);
+        panel.group.onmousedown = function(event) {
+            this.panelToDrag = panel;
+            colaLayout.dragStart(panel);
             return false;
         }.bind(this);
-        node.group.ontouchstart = function(event) {
-            return node.group.onmousedown(event.touches[0]);
+        panel.group.ontouchstart = function(event) {
+            return panel.group.onmousedown(event.touches[0]);
         }.bind(this);
-        node.group.onmouseover = colaLayout.mouseOver.bind(colaLayout, node);
-        node.group.onmouseout = colaLayout.mouseOut.bind(colaLayout, node);
+        panel.group.onmouseover = colaLayout.mouseOver.bind(colaLayout, panel);
+        panel.group.onmouseout = colaLayout.mouseOut.bind(colaLayout, panel);
 
-        node.rect = this.createElement('rect', node.group);
-        node.rect.setAttribute('rx', this.config.nodeCornerRadius);
-        node.rect.setAttribute('ry', this.config.nodeCornerRadius);
+        panel.rect = this.createElement('rect', panel.group);
+        panel.rect.classList.add('panel');
+        panel.rect.setAttribute('rx', this.config.panelCornerRadius);
+        panel.rect.setAttribute('ry', this.config.panelCornerRadius);
 
-        if(this.config.headCircle) {
-            node.circle = this.createElement('circle', node.group);
-            node.circle.linksPerNode = new Map;
-            node.circle.y = Math.round(-this.config.nodePadding);
-            node.circle.setAttribute('cy', node.circle.y);
-            node.circle.setAttribute('r', this.config.circleRadius);
-            this.setActivationHandlers(node.circle);
+        if(this.config.headSocket) {
+            panel.socket = this.createElement('circle', panel.group);
+            panel.socket.classList.add('socket');
+            panel.socket.wiresPerPanel = new Map;
+            panel.socket.y = Math.round(-this.config.panelPadding);
+            panel.socket.setAttribute('cy', panel.socket.y);
+            panel.socket.setAttribute('r', this.config.socketRadius);
+            this.setActivationHandlers(panel.socket);
         }
 
-        node.label = this.createElement('text', node.group);
-        node.label.setAttribute('text-anchor', 'middle');
-        node.label.setAttribute('y', Math.round(this.config.nodePadding+this.config.fontSize*0.4));
-        node.label.textContent = 'undefined';
-        this.setActivationHandlers(node.label);
+        panel.label = this.createElement('text', panel.group);
+        panel.label.setAttribute('text-anchor', 'middle');
+        panel.label.setAttribute('y', Math.round(this.config.panelPadding+this.config.fontSize*0.4));
+        panel.label.textContent = 'undefined';
+        this.setActivationHandlers(panel.label);
 
-        node.leftSide.group = this.createElement('g', node.group);
-        node.rightSide.group = this.createElement('g', node.group);
+        panel.leftSide.group = this.createElement('g', panel.group);
+        panel.rightSide.group = this.createElement('g', panel.group);
         if(this.config.segmentLines) {
-            node.lines = [];
-            node.lines.group = this.createElement('g', node.group);
+            panel.lines = [];
+            panel.lines.group = this.createElement('g', panel.group);
+            panel.lines.group.classList.add('panel');
         }
     }
 
-    node.rect.setAttribute('width', width);
-    node.rect.setAttribute('height', height);
+    panel.rect.setAttribute('width', width);
+    panel.rect.setAttribute('height', height);
     var halfWidth = Math.round(width/2);
-    if(node.circle)
-        node.circle.setAttribute('cx', halfWidth);
-    node.label.setAttribute('x', halfWidth);
+    if(panel.socket)
+        panel.socket.setAttribute('cx', halfWidth);
+    panel.label.setAttribute('x', halfWidth);
 
-    this.syncNodeSide(width, node.leftSide, true);
-    this.syncNodeSide(width, node.rightSide, false);
-    if(node.lines) {
-        for(var i = node.lines.group.childNodes.length-1; i >= segmentCount; --i)
-            node.lines.group.removeChild(node.lines.group.childNodes[i]);
-        node.lines.splice(segmentCount);
+    this.syncPanelSide(width, panel.leftSide, true);
+    this.syncPanelSide(width, panel.rightSide, false);
+    if(panel.lines) {
+        for(var i = panel.lines.group.childNodes.length-1; i >= segmentCount; --i)
+            panel.lines.group.removeChild(panel.lines.group.childNodes[i]);
+        panel.lines.splice(segmentCount);
 
-        for(var i = node.lines.group.childNodes.length; i < segmentCount; ++i) {
-            var posY = (i+1)*this.config.nodePadding*2;
-            node.lines[i] = this.createElement('path', node.lines.group);
-            node.lines[i].setAttribute('d', 'M0,'+posY+'h'+width);
+        for(var i = panel.lines.group.childNodes.length; i < segmentCount; ++i) {
+            var posY = (i+1)*this.config.panelPadding*2;
+            panel.lines[i] = this.createElement('path', panel.lines.group);
+            panel.lines[i].setAttribute('d', 'M0,'+posY+'h'+width);
         }
     }
 
-    node.width = width+this.config.nodeMargin;
-    node.height = height+this.config.nodeMargin;
-    return node;
+    panel.width = width+this.config.panelMargin;
+    panel.height = height+this.config.panelMargin;
+    return panel;
 };
 
-module.exports.prototype.initializeNode = function(node) {
-    node.sharedLinksPerNode = new Map;
-    this.syncNode(node);
-    this.nodes.push(node);
+module.exports.prototype.initializePanel = function(panel) {
+    panel.interPanelLinks = new Map;
+    this.syncPanel(panel);
+    this.panels.push(panel);
     this.dirtyFlag = true;
-    return node;
+    return panel;
 };
 
-module.exports.prototype.createNodeHelper = function(segementsLeft, segementsRight) {
-    var node = {};
-    node.leftSide = Array(segementsLeft);
+module.exports.prototype.createPanelHelper = function(segementsLeft, segementsRight) {
+    var panel = {};
+    panel.leftSide = Array(segementsLeft);
     for(var i = 0; i < segementsLeft; ++i)
-        node.leftSide[i] = {};
-    node.rightSide = Array(segementsRight);
+        panel.leftSide[i] = {};
+    panel.rightSide = Array(segementsRight);
     for(var i = 0; i < segementsRight; ++i)
-        node.rightSide[i] = {};
-    return this.initializeNode(node);
+        panel.rightSide[i] = {};
+    return this.initializePanel(panel);
 };
 
-module.exports.prototype.hasCircleAtIndex = function(node, index) {
+module.exports.prototype.hasSocketAtIndex = function(panel, index) {
     if(index < 0)
-        return node.leftSide[-index-1] != undefined;
+        return panel.leftSide[-index-1] != undefined;
     else if(index > 0)
-        return node.rightSide[index-1] != undefined;
+        return panel.rightSide[index-1] != undefined;
     else
-        return node.circle != undefined;
+        return panel.socket != undefined;
 };
 
-module.exports.prototype.getCircleAtIndex = function(node, index) {
+module.exports.prototype.getSocketAtIndex = function(panel, index) {
     if(index < 0)
-        return node.leftSide[-index-1].circle;
+        return panel.leftSide[-index-1].socket;
     else if(index > 0)
-        return node.rightSide[index-1].circle;
+        return panel.rightSide[index-1].socket;
     else
-        return node.circle;
+        return panel.socket;
 };
 
-module.exports.prototype.getIndexOfCircle = function(node, circle) {
-    if(node.circle == circle)
+module.exports.prototype.getIndexOfSocket = function(panel, socket) {
+    if(panel.socket == socket)
         return 0;
-    for(var i = 0; i < node.leftSide.length; ++i)
-        if(node.leftSide[i].circle == circle)
+    for(var i = 0; i < panel.leftSide.length; ++i)
+        if(panel.leftSide[i].socket == socket)
             return -i-1;
-    for(var i = 0; i < node.rightSide.length; ++i)
-        if(node.rightSide[i].circle == circle)
+    for(var i = 0; i < panel.rightSide.length; ++i)
+        if(panel.rightSide[i].socket == socket)
             return i+1;
     return undefined;
 };
 
-module.exports.prototype.linkNodes = function(srcNode, dstNode) {
-    var entry = srcNode.sharedLinksPerNode.get(dstNode);
+module.exports.prototype.connectPanels = function(srcPanel, dstPanel) {
+    var entry = srcPanel.interPanelLinks.get(dstPanel);
     if(entry)
         ++entry.arc;
     else {
         entry = {arc:1};
-        srcNode.sharedLinksPerNode.set(dstNode, entry);
+        srcPanel.interPanelLinks.set(dstPanel, entry);
     }
     return entry;
 };
 
-module.exports.prototype.unlinkNodes = function(srcNode, dstNode) {
-    var entry = srcNode.sharedLinksPerNode.get(dstNode);
+module.exports.prototype.disconnectPanels = function(srcPanel, dstPanel) {
+    var entry = srcPanel.interPanelLinks.get(dstPanel);
     if(entry.arc > 1)
         --entry.arc;
     else {
-        if(entry.link)
-            this.layoutEngine._links.splice(this.layoutEngine._links.indexOf(entry.link), 1);
-        srcNode.sharedLinksPerNode.delete(dstNode);
+        if(entry.wire)
+            this.layoutEngine._links.splice(this.layoutEngine._links.indexOf(entry.wire), 1);
+        srcPanel.interPanelLinks.delete(dstPanel);
     }
 };
 
-module.exports.prototype.linkCircle = function(link, srcCircle, dstNode) {
+module.exports.prototype.connectSockets = function(wire, srcSocket, dstPanel) {
     var set = undefined;
-    if(!srcCircle.linksPerNode.has(dstNode)) {
+    if(!srcSocket.wiresPerPanel.has(dstPanel)) {
         set = new Set;
-        srcCircle.linksPerNode.set(dstNode, set);
+        srcSocket.wiresPerPanel.set(dstPanel, set);
     } else {
-        set = srcCircle.linksPerNode.get(dstNode);
-        if(set.has(link))
+        set = srcSocket.wiresPerPanel.get(dstPanel);
+        if(set.has(wire))
             return false;
     }
-    set.add(link);
+    set.add(wire);
     return true;
 };
 
-module.exports.prototype.unlinkCircle = function(link, srcCircle, dstNode) {
-    if(!srcCircle.linksPerNode.has(dstNode))
+module.exports.prototype.disconnectSockets = function(wire, srcSocket, dstPanel) {
+    if(!srcSocket.wiresPerPanel.has(dstPanel))
         return false;
-    var set = srcCircle.linksPerNode.get(dstNode);
-    if(!set.has(link))
+    var set = srcSocket.wiresPerPanel.get(dstPanel);
+    if(!set.has(wire))
         return false;
-    set.delete(link);
+    set.delete(wire);
     if(set.size == 0)
-        srcCircle.linksPerNode.delete(dstNode);
+        srcSocket.wiresPerPanel.delete(dstPanel);
     return true;
 };
 
-module.exports.prototype.initializeLink = function(link) {
-    if(!this.linkCircle(link, link.srcCircle, link.dstNode))
+module.exports.prototype.initializeWire = function(wire) {
+    if(!this.connectSockets(wire, wire.srcSocket, wire.dstPanel))
         return;
-    this.linkCircle(link, link.dstCircle, link.srcNode);
-    link.path = this.createElement('path', this.svg);
-    link.path.classList.add('link');
-    link.path.classList.add('fadeIn');
-    if(link.srcNode != link.dstNode) {
-        var entry = this.linkNodes(link.srcNode, link.dstNode);
-        this.linkNodes(link.dstNode, link.srcNode);
+    this.connectSockets(wire, wire.dstSocket, wire.srcPanel);
+    wire.path = this.createElement('path', this.wiresGroup);
+    wire.path.classList.add('wire');
+    wire.path.classList.add('fadeIn');
+    if(wire.srcPanel != wire.dstPanel) {
+        var entry = this.connectPanels(wire.srcPanel, wire.dstPanel);
+        this.connectPanels(wire.dstPanel, wire.srcPanel);
         if(entry.arc == 1) {
-            entry.link = {source:link.srcNode, target:link.dstNode};
-            this.layoutEngine._links.push(entry.link);
+            entry.wire = {source:wire.srcPanel, target:wire.dstPanel};
+            this.layoutEngine._links.push(entry.wire);
         }
     }
-    this.links.add(link);
+    this.wires.add(wire);
     this.dirtyFlag = true;
-    return link;
+    return wire;
 };
 
 module.exports.prototype.delete = function(element) {
@@ -661,13 +669,13 @@ module.exports.prototype.delete = function(element) {
     this.dirtyFlag = true;
 };
 
-module.exports.prototype.createLinkHelper = function(srcNode, dstNode, srcIndex, dstIndex) {
-    var link = {};
-    link.srcNode = srcNode;
-    link.dstNode = dstNode;
-    link.srcCircle = this.getCircleAtIndex(link.srcNode, srcIndex);
-    link.dstCircle = this.getCircleAtIndex(link.dstNode, dstIndex);
-    return this.initializeLink(link);
+module.exports.prototype.createWireHelper = function(srcPanel, dstPanel, srcIndex, dstIndex) {
+    var wire = {};
+    wire.srcPanel = srcPanel;
+    wire.dstPanel = dstPanel;
+    wire.srcSocket = this.getSocketAtIndex(wire.srcPanel, srcIndex);
+    wire.dstSocket = this.getSocketAtIndex(wire.dstPanel, dstIndex);
+    return this.initializeWire(wire);
 };
 
 module.exports.prototype.syncGraph = function() {
@@ -680,30 +688,30 @@ module.exports.prototype.syncGraph = function() {
     this.tickGraph();
 };
 
-module.exports.prototype.setCursorCircle = function(circle) {
-    if(this.cursorCircle)
-        this.cursorCircle.classList.remove('cursor');
-    this.cursorCircle = circle;
-    if(circle)
-        this.cursorCircle.classList.add('cursor');
+module.exports.prototype.setCursorSocket = function(socket) {
+    if(this.cursorSocket)
+        this.cursorSocket.classList.remove('cursor');
+    this.cursorSocket = socket;
+    if(socket)
+        this.cursorSocket.classList.add('cursor');
 };
 
 module.exports.prototype.setCursorIndex = function(index) {
-    if(!this.cursorNode || !this.hasCircleAtIndex(this.cursorNode, index))
+    if(!this.cursorPanel || !this.hasSocketAtIndex(this.cursorPanel, index))
         return false;
-    this.setCursorCircle(this.getCircleAtIndex(this.cursorNode, index));
+    this.setCursorSocket(this.getSocketAtIndex(this.cursorPanel, index));
     return true;
 };
 
-module.exports.prototype.cursorFollowLink = function() {
-    if(!this.cursorNode || this.cursorCircle.linksPerNode.size != 1)
+module.exports.prototype.cursorFollowWire = function() {
+    if(!this.cursorPanel || this.cursorSocket.wiresPerPanel.size != 1)
         return false;
-    var set = this.cursorCircle.linksPerNode.values().next().value;
+    var set = this.cursorSocket.wiresPerPanel.values().next().value;
     if(set.size != 1)
         return false;
-    var link = set.values().next().value;
-    this.cursorNode = (this.cursorNode == link.srcNode) ? link.dstNode : link.srcNode;
-    this.setCursorCircle((this.cursorCircle == link.srcCircle) ? link.dstCircle : link.srcCircle);
+    var wire = set.values().next().value;
+    this.cursorPanel = (this.cursorPanel == wire.srcPanel) ? wire.dstPanel : wire.srcPanel;
+    this.setCursorSocket((this.cursorSocket == wire.srcSocket) ? wire.dstSocket : wire.srcSocket);
     return true;
 };
 
