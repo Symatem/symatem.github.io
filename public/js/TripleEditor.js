@@ -1,71 +1,119 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var WiredPanels = require('WiredPanels');
+(function (process){
+'use strict';
+
+const WiredPanels = require('WiredPanels'),
+      Symatem = require('SymatemWasm');
 
 module.exports = function(element) {
+    if(typeof WebAssembly !== 'object') {
+        const message = document.createElement('div');
+        element.appendChild(message);
+        message.innerHTML = 'WebAssembly is a young technology and seems to be unsupported or disabled.<br /><br />';
+        const link = document.createElement('a');
+        message.appendChild(link);
+        link.href = 'http://webassembly.org/demo/';
+        link.innerText = 'Learn More';
+        return;
+    }
+
     this.wiredPanels = new WiredPanels(element);
     this.panelIndex = new Map;
+    this.labelIndex = new Map;
 
-    this.showSymbol(1485);
-    this.wireSymbolsAndSyncGraph();
-    this.wiredPanels.cursorPanel = this.wiredPanels.panels[0];
-    this.wiredPanels.setCursorIndex(0);
+    document.addEventListener('dragover', function(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    }, false);
+    document.addEventListener('drop', module.exports.prototype.loadImage, false);
+
+    this.fetchResource('../public/js/Symatem.wasm', 'arraybuffer').then(function(event) {
+        new Symatem(new Uint8Array(event.target.response)).then(function(symatemInstance) {
+            this.symatem = symatemInstance;
+            const result = this.symatem.deserializeBlob(document.getElementById('code').innerText);
+            this.showSymbol((result[0]) ? result[0] : result);
+            this.wireSymbolsAndSyncGraph();
+        }.bind(this));
+    }.bind(this));
 }
 
-module.exports.prototype.syncLabel = function(label, symbol) {
-    var symbolName = this.data.symbolNames[symbol];
-    if(symbolName != undefined) {
-        label.textContent = symbolName;
-        label.classList.remove('disabled');
+module.exports.prototype.syncLabel = function(segment) {
+    const string = this.symatem.serializeBlob(segment.symbol);
+    if(typeof string === 'undefined') {
+        segment.label.classList.add('disabled');
+        segment.label.textContent = '#'+segment.symbol;
     } else {
-        label.textContent = '#'+symbol;
-        label.classList.add('disabled');
+        segment.label.classList.remove('disabled');
+        segment.label.textContent = string;
     }
 };
 
-module.exports.prototype.syncPanelLabels = function(panel) {
-    this.syncLabel(panel.label, panel.symbol);
-    for(var i = 0; i < panel.leftSide.length; ++i) {
-        this.syncLabel(panel.leftSide[i].label, panel.leftSide[i].symbol);
-        this.syncLabel(panel.rightSide[i].label, panel.rightSide[i].symbol);
+module.exports.prototype.indexLabel = function(segement) {
+    let set = this.labelIndex.get(segement.symbol);
+    if(!set) {
+        set = new Set;
+        this.labelIndex.set(segement.symbol, set);
     }
+    set.add(segement);
+    this.syncLabel(segement);
+};
+
+module.exports.prototype.unindexLabel = function(segement) {
+    let set = this.labelIndex.get(segement.symbol);
+    if(set)
+        set.delete(segement);
 };
 
 module.exports.prototype.showSymbol = function(symbol) {
-    var panel = {leftSide:[], rightSide:[], symbol:symbol};
-    for(var i = 0; i < this.data.triples.length; ++i) {
-        if(this.data.triples[i][0] != symbol)
-            continue;
-        panel.leftSide.push({symbol:this.data.triples[i][1]});
-        panel.rightSide.push({symbol:this.data.triples[i][2]});
+    const panel = { type: 'entity', leftSide: [], rightSide: [], symbol: symbol },
+          queryResult = this.symatem.query(this.symatem.queryMask.MVV, symbol, 0, 0);
+    for(let i = 0; i < queryResult.length; i += 2) {
+        let segement = { type: 'attribute', symbol: queryResult[i] };
+        segement.onactivation = this.handleLabelActivation.bind(this, panel, segement);
+        panel.leftSide.push(segement);
+        segement = { type: 'value', symbol: queryResult[i+1] };
+        segement.onactivation = this.handleLabelActivation.bind(this, panel, segement);
+        panel.rightSide.push(segement);
     }
+    panel.onactivation = this.handleLabelActivation.bind(this, panel, panel);
     this.wiredPanels.initializePanel(panel);
     this.panelIndex.set(symbol, panel);
-    for(var i = 0; i < panel.lines.length; ++i)
-        panel.lines[i].classList.add('entity');
-    panel.rect.classList.add('entity');
-    panel.socket.classList.add('entity');
-    panel.socket.onactivation = this.handleLabelActivation.bind(this, panel, panel);
-    for(var i = 0; i < panel.leftSide.length; ++i) {
-        panel.leftSide[i].socket.classList.add('attribute');
-        panel.leftSide[i].socket.onactivation = this.handleLabelActivation.bind(this, panel, panel.leftSide[i]);
-        panel.rightSide[i].socket.classList.add('value');
-        panel.rightSide[i].socket.onactivation = this.handleLabelActivation.bind(this, panel, panel.rightSide[i]);
+    this.indexLabel(panel);
+    for(let i = 0; i < panel.leftSide.length; ++i) {
+        this.indexLabel(panel.leftSide[i]);
+        this.indexLabel(panel.rightSide[i]);
     }
-    this.syncPanelLabels(panel);
+    /*panel.label.onclick = function() {
+        let blob = prompt('Edit blob:', panel.label.textContent);
+        if(blob != null) {
+            if(blob.length == 0)
+                blob = undefined;
+            else if(!Number.isNaN(parseFloat(blob)))
+                blob = parseFloat(blob);
+            else if(!Number.isNaN(parseInt(blob)))
+                blob = parseInt(blob);
+            this.symatem.writeBlob(panel.symbol, blob);
+            for(const segement of this.labelIndex.get(panel.symbol))
+                this.syncLabel(segement);
+        }
+    }.bind(this);*/
 };
 
 module.exports.prototype.hideSymbol = function(symbol) {
-    var panel = this.panelIndex.get(symbol);
+    const panel = this.panelIndex.get(symbol);
+    this.unindexLabel(panel);
+    for(let i = 0; i < panel.leftSide.length; ++i) {
+        this.unindexLabel(panel.leftSide[i]);
+        this.unindexLabel(panel.rightSide[i]);
+    }
     this.panelIndex.delete(symbol);
     this.wiredPanels.delete(panel);
 };
 
 module.exports.prototype.handleLabelActivation = function(panel, segment) {
-    if(panel == segment) {
-        this.wiredPanels.cursorPanel = panel;
-        this.wiredPanels.setCursorIndex(0);
+    if(panel == segment)
         return;
-    }
     if(this.panelIndex.has(segment.symbol)) {
         this.hideSymbol(segment.symbol);
         this.wiredPanels.syncGraph();
@@ -76,646 +124,836 @@ module.exports.prototype.handleLabelActivation = function(panel, segment) {
 };
 
 module.exports.prototype.wireSymbolsAndSyncGraph = function() {
-    for(var pair of this.panelIndex) {
-        var panel = pair[1];
-        for(var i = 0; i < panel.leftSide.length; ++i) {
-            var leftSegment = panel.leftSide[i],
+    for(const pair of this.panelIndex) {
+        const panel = pair[1];
+        for(let i = 0; i < panel.leftSide.length; ++i) {
+            const leftSegment = panel.leftSide[i],
                   rightSegment = panel.rightSide[i];
-            if(leftSegment.socket.wiresPerPanel.size == 0 && this.panelIndex.has(leftSegment.symbol)) {
-                var wire = this.wiredPanels.createWireHelper(panel, this.panelIndex.get(leftSegment.symbol), -i-1, 0);
-                wire.path.classList.add('attribute');
-            }
-            if(rightSegment.socket.wiresPerPanel.size == 0 && this.panelIndex.has(rightSegment.symbol)) {
-                var wire = this.wiredPanels.createWireHelper(panel, this.panelIndex.get(rightSegment.symbol), i+1, 0);
-                wire.path.classList.add('value');
-            }
+            if(leftSegment.wiresPerPanel.size == 0 && this.panelIndex.has(leftSegment.symbol))
+                this.wiredPanels.createWireHelper('attribute', panel, this.panelIndex.get(leftSegment.symbol), -i-1, 0);
+            if(rightSegment.wiresPerPanel.size == 0 && this.panelIndex.has(rightSegment.symbol))
+                this.wiredPanels.createWireHelper('value', panel, this.panelIndex.get(rightSegment.symbol), i+1, 0);
         }
     }
     this.wiredPanels.syncGraph();
 };
 
-module.exports.prototype.data = {
-    symbolNames:{
-        13:'Procedure',
-        14:'Execute',
-        15:'Next',
-        16:'Static',
-        17:'Dynamic',
-        18:'Input',
-        19:'Output',
-        23:'Count',
-        32:'Create',
-        35:'Pop',
-        36:'Branch',
-        54:'CloneBlob',
-        62:'LessThan',
-        64:'Comparandum',
-        72:'Add',
-        74:'Subtract',
-        75:'Minuend',
-        76:'Subtrahend',
-        1485:'FiboRec',
-        1590:'#a',
-        1601:'#b',
-        1816:2,
-        2775:1
-    },
-    triples:[
-        [1485, 14, 1537],
-        [1537, 13, 32],
-        [1612, 19, 1590],
-        [1612, 19, 1601],
-        [1537, 16, 1612],
-        [1537, 15, 1691],
-        [1691, 13, 62],
-        [1743, 19, 1590],
-        [1743, 18, 18],
-        [1691, 17, 1743],
-        [1831, 64, 1816],
-        [1691, 16, 1831],
-        [1691, 15, 1902],
-        [1902, 13, 36],
-        [1952, 18, 1590],
-        [1902, 17, 1952],
-        [2024, 13, 54],
-        [2069, 18, 18],
-        [2069, 19, 19],
-        [2024, 17, 2069],
-        [2024, 15, 2148],
-        [2148, 13, 35],
-        [2211, 23, 1816],
-        [2148, 16, 2211],
-        [2256, 36, 2024],
-        [1902, 16, 2256],
-        [1902, 15, 2327],
-        [2327, 13, 74],
-        [2377, 19, 1590],
-        [2377, 75, 18],
-        [2327, 17, 2377],
-        [2462, 76, 1816],
-        [2327, 16, 2462],
-        [2327, 15, 2531],
-        [2531, 13, 1485],
-        [2581, 19, 1590],
-        [2581, 18, 1590],
-        [2531, 17, 2581],
-        [2531, 15, 2660],
-        [2660, 13, 74],
-        [2708, 19, 1601],
-        [2708, 75, 18],
-        [2660, 17, 2708],
-        [2790, 76, 2775],
-        [2660, 16, 2790],
-        [2660, 15, 2859],
-        [2859, 13, 1485],
-        [2907, 19, 1601],
-        [2907, 18, 1601],
-        [2859, 17, 2907],
-        [2859, 15, 2990],
-        [2990, 13, 72],
-        [3040, 19, 19],
-        [3040, 18, 1590],
-        [3040, 18, 1601],
-        [2990, 17, 3040]
-    ]
+module.exports.prototype.saveImage = function() {
+    const a = document.createElement('a'),
+          file = new Blob([this.symatem.saveImage()]);
+    a.href = URL.createObjectURL(file);
+    a.download = 'Image';
+    a.click();
 };
 
-new module.exports(document.currentScript.parentNode);
+module.exports.prototype.loadImage = function(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    const input = event.dataTransfer || event.target;
+    if(!input || !input.files || input.files.length != 1)
+        return;
+    const file = input.files[0], reader = new FileReader();
+    reader.onload = function(event) {
+        this.symatem.loadImage(new Uint8Array(reader.result));
+    };
+    reader.onerror = function(error) {
+        console.log(error);
+    };
+    reader.readAsArrayBuffer(file);
+};
 
-},{"WiredPanels":2}],2:[function(require,module,exports){
-var colaLayout = require('webcola').Layout;
+module.exports.prototype.fetchResource = function(URL, type) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', URL, true);
+    xhr.responseType = type;
+    xhr.send(null);
+    return new Promise(function(fullfill, reject) {
+        xhr.onload = fullfill;
+        xhr.onerror = reject;
+    });
+};
 
-module.exports = function(parentElement) {
-    this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    parentElement.appendChild(this.svg);
-    this.svg.parentNode.classList.add('WiredPanels');
-    document.body.onkeydown = this.handleKeyboard.bind(this);
-    this.svg.parentNode.onmousemove = function(event) {
-        if(!this.panelToDrag)
-            return true;
-        var rect = this.svg.getBoundingClientRect();
-        this.panelToDrag.px = event.pageX-rect.left-window.pageXOffset+this.config.panelMargin/2;
-        this.panelToDrag.py = event.pageY-rect.top-window.pageYOffset+this.config.panelMargin/2;
-        this.tickGraph();
-        return false;
-    }.bind(this);
-    this.svg.parentNode.ontouchmove = function(event) {
-        return this.svg.parentNode.onmousemove(event.touches[0]);
-    }.bind(this);
-    this.svg.parentNode.onmouseup = function(event) {
-        if(!this.panelToDrag)
-            return true;
-        colaLayout.dragEnd(this.panelToDrag);
-        this.panelToDrag = undefined;
-        return false;
-    }.bind(this);
-    this.svg.parentNode.ontouchend = function(event) {
-        return this.svg.parentNode.onmouseup(event.touches[0]);
-    }.bind(this);
+if(process.browser)
+    new module.exports(document.currentScript.parentNode);
 
-    this.panelsGroup = this.createElement('g', this.svg);
-    this.wiresGroup = this.createElement('g', this.svg);
-    var svgDefs = this.createElement('defs', this.svg);
-    /* var arrowMarker = this.createElement('marker', svgDefs);
-    arrowMarker.setAttribute('id', 'arrowMarker');
-    arrowMarker.setAttribute('refX', 6);
-    arrowMarker.setAttribute('refY', 3);
-    arrowMarker.setAttribute('markerWidth', 7);
-    arrowMarker.setAttribute('markerHeight', 6);
-    arrowMarker.setAttribute('orient', 'auto');
-    var arrowPath = this.createElement('path', arrowMarker);
-    arrowPath.setAttribute('d', 'M0,1L5,3L0,5z'); */
+}).call(this,require('_process'))
+},{"SymatemWasm":2,"WiredPanels":3,"_process":5}],2:[function(require,module,exports){
+'use strict';
 
-    var blurFilter = this.createElement('filter', svgDefs);
-    blurFilter.setAttribute('id', 'blurFilter');
-    blurFilter.setAttribute('x', -0.5);
-    blurFilter.setAttribute('y', -0.5);
-    blurFilter.setAttribute('width', 4);
-    blurFilter.setAttribute('height', 4);
-    var feGaussianBlur = this.createElement('feGaussianBlur', blurFilter);
-    feGaussianBlur.setAttribute('in', 'SourceGraphic');
-    feGaussianBlur.setAttribute('result', 'blur');
-    feGaussianBlur.setAttribute('stdDeviation', 3);
-    var feComponentTransfer = this.createElement('feComponentTransfer', blurFilter);
-    feComponentTransfer.setAttribute('in', 'blur');
-    feComponentTransfer.setAttribute('result', 'brighter');
-    var feFunc = this.createElement('feFuncA', feComponentTransfer);
-    feFunc.setAttribute('type', 'linear');
-    feFunc.setAttribute('slope', 2.5);
-    var feMerge = this.createElement('feMerge', blurFilter);
-    this.createElement('feMergeNode', feMerge).setAttribute('in', 'brighter');
-    this.createElement('feMergeNode', feMerge).setAttribute('in', 'SourceGraphic');
+function stringToUint8Array(string) {
+    const array = [];
+    for(var i = 0; i < string.length; ++i)
+        array.push(string[i].charCodeAt(0));
+    return new Uint8Array(array);
+}
 
-    this.layoutEngine = new colaLayout()
-        .linkDistance(this.config.panelDistance)
-        .avoidOverlaps(true);
-    this.panels = this.layoutEngine._nodes;
-    this.wires = new Set;
+function uint8ArrayToString(array) {
+    return String.fromCharCode.apply(null, array);
+}
+
+module.exports = function(code) {
+    return WebAssembly.compile(code).then(function(result) {
+        this.wasmModule = result;
+        this.wasmInstance = new WebAssembly.Instance(this.wasmModule, { 'env': this.env });
+        this.superPageByteAddress = this.wasmInstance.exports.memory.buffer.byteLength;
+        this.call(this.initializerFunction+'WASM.cpp');
+        return this;
+    }.bind(this), function(error) {
+        console.log(error);
+    });
+};
+
+module.exports.prototype.initializerFunction = '_GLOBAL__sub_I_';
+module.exports.prototype.chunkSize = 65536;
+module.exports.prototype.blobBufferSize = 4096;
+module.exports.prototype.symbolByName = {
+    BlobType: 13,
+    Natural: 14,
+    Integer: 15,
+    Float: 16,
+    UTF8: 17
+};
+
+module.exports.prototype.env = {
+    'consoleLogString': function(basePtr, length) {
+        console.log(uint8ArrayToString(this.getMemorySlice(basePtr, length)));
+    },
+    'consoleLogInteger': function(basePtr) {
+        console.log(new DataView(this.wasmInstance.exports.memory.buffer).getInt32(basePtr, true));
+    },
+    'consoleLogFloat': function(basePtr) {
+        console.log(new DataView(this.wasmInstance.exports.memory.buffer).getFloat64(basePtr, true));
+    }
+};
+
+module.exports.prototype.getMemorySlice = function(begin, length) {
+    return new Uint8Array(this.wasmInstance.exports.memory.buffer.slice(begin, begin+length));
+};
+
+module.exports.prototype.setMemorySlice = function(begin, slice) {
+    new Uint8Array(this.wasmInstance.exports.memory.buffer).set(slice, begin);
+};
+
+module.exports.prototype.saveImage = function() {
+    return this.wasmInstance.exports.memory.buffer.slice(this.superPageByteAddress);
+};
+
+module.exports.prototype.loadImage = function(image) {
+    const currentSize = this.wasmInstance.exports.memory.buffer.byteLength,
+          newSize = this.superPageByteAddress+image.byteLength;
+    if(currentSize < newSize)
+        this.wasmInstance.exports.memory.grow(math.ceil((newSize-currentSize)/this.chunkSize));
+    this.setMemorySlice(this.superPageByteAddress, image);
+};
+
+module.exports.prototype.call = function(name, ...params) {
+    try {
+        return this.wasmInstance.exports[name](...params);
+    } catch(error) {
+        console.log(name, error);
+    }
+};
+
+module.exports.prototype.readSymbolBlob = function(symbol) {
+    return new Uint32Array(this.readBlob(symbol).buffer);
+}
+
+module.exports.prototype.readBlob = function(symbol, offset, length) {
+    if(!offset)
+        offset = 0;
+    if(!length)
+        length = this.call('getBlobSize', symbol)-offset;
+    if(length < 0)
+        return;
+    let sliceOffset = 0;
+    const bufferByteAddress = this.call('getStackPointer')-this.blobBufferSize,
+          data = new Uint8Array(Math.ceil(length/8));
+    while(length > 0) {
+        const sliceLength = Math.min(length, this.blobBufferSize*8);
+        this.call('readBlob', symbol, offset+sliceOffset*8, sliceLength);
+        const bufferSlice = this.getMemorySlice(bufferByteAddress+sliceOffset, Math.ceil(sliceLength/8));
+        data.set(bufferSlice, sliceOffset);
+        length -= sliceLength;
+        sliceOffset += Math.ceil(sliceLength/8);
+    }
+    return data;
+};
+
+module.exports.prototype.writeBlob = function(symbol, data, offset) {
+    let type = 0;
+    switch(typeof data) {
+        case 'string':
+            data = stringToUint8Array(data);
+            type = this.symbolByName.UTF8;
+            break;
+        case 'number':
+            let buffer = new Uint8Array(4), view = new DataView(buffer.buffer);
+            if(!Number.isInteger(data)) {
+                view.setFloat32(0, data, true);
+                type = this.symbolByName.Float;
+            } else if(data < 0) {
+                view.setInt32(0, data, true);
+                type = this.symbolByName.Integer;
+            } else {
+                view.setUint32(0, data, true);
+                type = this.symbolByName.Natural;
+            }
+            data = buffer;
+            break;
+    }
+    const bufferByteAddress = this.call('getStackPointer')-this.blobBufferSize,
+          oldLength = this.call('getBlobSize', symbol);
+    let newLength = (data == undefined) ? 0 : data.length*8, sliceOffset = 0;
+    if(!offset) {
+        offset = 0;
+        this.call('setBlobSize', symbol, newLength);
+    } else if(newLength+offset > oldLength)
+        return;
+    while(newLength > 0) {
+        const sliceLength = Math.min(newLength, this.blobBufferSize*8),
+              bufferSlice = new Uint8Array(data.slice(sliceOffset, sliceOffset+Math.ceil(sliceLength/8)));
+        this.setMemorySlice(bufferByteAddress+sliceOffset, bufferSlice);
+        this.call('writeBlob', symbol, offset+sliceOffset*8, sliceLength);
+        newLength -= sliceLength;
+        sliceOffset += Math.ceil(sliceLength/8);
+    }
+    this.call('setSolitary', symbol, this.symbolByName.BlobType, type);
+};
+
+module.exports.prototype.serializeBlob = function(symbol) {
+    const type = this.query(this.queryMask.MMV, symbol, this.symbolByName.BlobType, 0);
+    if(type.length != 1)
+        return;
+    const blob = this.readBlob(symbol),
+          dataView = new DataView(blob.buffer);
+    switch(type[0]) {
+        case this.symbolByName.Natural:
+            return dataView.getUint32(0, true);
+        case this.symbolByName.Integer:
+            return dataView.getInt32(0, true);
+        case this.symbolByName.Float:
+            return dataView.getFloat32(0, true);
+        case this.symbolByName.UTF8:
+            return uint8ArrayToString(blob);
+    }
+};
+
+module.exports.prototype.deserializeBlob = function(inputString, packageSymbol = 0) {
+    const inputSymbol = this.call('createSymbol'), outputSymbol = this.call('createSymbol');
+    this.writeBlob(inputSymbol, inputString);
+    const exception = this.call('deserializeBlob', inputSymbol, outputSymbol, packageSymbol);
+    const result = this.readSymbolBlob(outputSymbol);
+    this.call('releaseSymbol', inputSymbol);
+    this.call('releaseSymbol', outputSymbol);
+    return (exception) ? exception : result;
+};
+
+module.exports.prototype.queryMode = ['M', 'V', 'I'];
+module.exports.prototype.queryMask = {};
+for(let i = 0; i < 27; ++i)
+    module.exports.prototype.queryMask[module.exports.prototype.queryMode[i%3] + module.exports.prototype.queryMode[Math.floor(i/3)%3] + module.exports.prototype.queryMode[Math.floor(i/9)%3]] = i;
+
+module.exports.prototype.query = function(mask, entity, attribute, value, countOnly) {
+    const resultSymbol = (countOnly) ? 0 : this.call('createSymbol');
+    let result = this.call('query', mask, entity, attribute, value, resultSymbol);
+    if(!countOnly) {
+        result = this.readSymbolBlob(resultSymbol);
+        this.call('releaseSymbol', resultSymbol);
+    }
+    return result;
+};
+
+},{}],3:[function(require,module,exports){
+/* jslint node: true, esnext: true */
+/* global document, window */
+
+'use strict';
+
+const colaLayout = require('webcola').Layout;
+
+function isOfType(obj, type) {
+	return Object.prototype.toString.call(obj) === '[object '+type+']';
+};
+
+module.exports = function (parentElement) {
+  document.body.addEventListener('keydown', this.handleKeyboard.bind(this));
+  this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  parentElement.appendChild(this.svg);
+  this.svg.parentNode.classList.add('WiredPanels');
+  this.svg.parentNode.onmousemove = function (event) {
+    if (!this.dragging)
+      return false;
+    if (isOfType(this.dragging, 'Map')) {
+      this.dragging.forEach(function (dragging, node) {
+        this.transformPanelMousePos(event, 'p', node, '', dragging);
+      }, this);
+      this.tickGraph();
+    } else if (this.dragging.srcSocket) {
+      if (!this.dragging.path) {
+        this.initializeWire(this.dragging);
+        this.dragging.path.setAttribute('pointer-events', 'none');
+      }
+      const rect = this.svg.getBoundingClientRect();
+      this.dragging.dstSocket.circle.x = event.pageX - rect.left - window.pageXOffset;
+      this.dragging.dstSocket.circle.y = event.pageY - rect.top - window.pageYOffset;
+      this.tickWire(this.dragging);
+    }
+    event.stopPropagation();
+    return true;
+  }.bind(this);
+  this.svg.parentNode.ontouchmove = function (event) {
+    return this.svg.parentNode.onmousemove(event.touches[0]);
+  }.bind(this);
+  this.svg.parentNode.onmouseup = function (event) {
+    if (!this.dragging)
+      return false;
+    if (isOfType(this.dragging, 'Map')) {
+      this.dragging.forEach(function (dragging, node) {
+        colaLayout.dragEnd(node);
+      }, this);
+      for (let panel of this.selection.panels)
+        panel.rect.classList.remove('selected');
+      this.selection.panels.clear();
+    } else if (this.dragging.path) {
+      this.selection.wires.delete(this.dragging);
+      this.wires.delete(this.dragging);
+      this.deleteElements([this.dragging.path]);
+    }
+    delete this.dragging;
+    event.stopPropagation();
+    return true;
+  }.bind(this);
+  this.svg.parentNode.ontouchend = function (event) {
+    return this.svg.parentNode.onmouseup(event.touches[0]);
+  }.bind(this);
+
+  this.panelsGroup = this.createElement('g', this.svg);
+  this.wiresGroup = this.createElement('g', this.svg);
+  const svgDefs = this.createElement('defs', this.svg);
+
+  const blurFilter = this.createElement('filter', svgDefs);
+  blurFilter.setAttribute('id', 'blurFilter');
+  blurFilter.setAttribute('x', -0.5);
+  blurFilter.setAttribute('y', -0.5);
+  blurFilter.setAttribute('width', 4);
+  blurFilter.setAttribute('height', 4);
+  const feGaussianBlur = this.createElement('feGaussianBlur', blurFilter);
+  feGaussianBlur.setAttribute('in', 'SourceGraphic');
+  feGaussianBlur.setAttribute('result', 'blur');
+  feGaussianBlur.setAttribute('stdDeviation', 3);
+  const feComponentTransfer = this.createElement('feComponentTransfer', blurFilter);
+  feComponentTransfer.setAttribute('in', 'blur');
+  feComponentTransfer.setAttribute('result', 'brighter');
+  const feFunc = this.createElement('feFuncA', feComponentTransfer);
+  feFunc.setAttribute('type', 'linear');
+  feFunc.setAttribute('slope', 2.5);
+  const feMerge = this.createElement('feMerge', blurFilter);
+  this.createElement('feMergeNode', feMerge).setAttribute('in', 'brighter');
+  this.createElement('feMergeNode', feMerge).setAttribute('in', 'SourceGraphic');
+
+  this.layoutEngine = new colaLayout()
+    .linkDistance(this.config.panelDistance)
+    .avoidOverlaps(true);
+  this.panels = this.layoutEngine._nodes;
+  this.wires = new Set();
+  this.selection = {
+    sockets: new Set(),
+    wires: new Set(),
+    panels: new Set()
+  };
+};
+
+module.exports.prototype.transformPanelMousePos = function (event, dstPrefix, dst, srcPrefix, src) {
+    const rect = this.svg.getBoundingClientRect();
+    dst[dstPrefix+'x'] = event.pageX - rect.left - window.pageXOffset + this.config.panelMargin / 2 - src[srcPrefix+'x'];
+    dst[dstPrefix+'y'] = event.pageY - rect.top - window.pageYOffset + this.config.panelMargin / 2 - src[srcPrefix+'y'];
 };
 
 module.exports.prototype.config = {
-    panelDistance: 150,
-    panelMargin: 24,
-    panelPadding: 12,
-    panelCornerRadius: 10,
-    socketRadius: 5,
-    fontSize: 12,
-    wireStyle: 'hybrid',
-    headSocket: true,
-    segmentLines: true
+  panelDistance: 150,
+  panelMargin: 24,
+  panelPadding: 12,
+  panelCornerRadius: 10,
+  socketRadius: 5,
+  fontSize: 12,
+  wireStyle: 'hybrid',
+  headSocket: true,
+  panelLines: true
 };
 
-module.exports.prototype.deleteSocket = function(socket) {
-    if(this.cursorSocket == socket)
-        this.cursorPanel = undefined;
-    for(var pair of socket.wiresPerPanel)
-        for(var wire of pair[1])
-            wire.deathFlag = true;
+module.exports.prototype.deleteSocket = function (socket) {
+  this.selection.sockets.delete(socket);
+  for (const pair of socket.wiresPerPanel)
+    for (const wire of pair[1])
+      wire.deathFlag = true;
 };
 
-module.exports.prototype.tickSocket = function(posX, posY, element) {
-    element.x = posX+parseInt(element.getAttribute('cx'));
-    element.y = posY+parseInt(element.getAttribute('cy'));
+module.exports.prototype.tickSocket = function (posX, posY, socket) {
+  let element = socket.circle;
+  element.x = posX + parseInt(element.getAttribute('cx'));
+  element.y = posY + parseInt(element.getAttribute('cy'));
 };
 
-module.exports.prototype.tickGraph = function() {
-    this.layoutEngine._running = true;
-    this.layoutEngine._alpha = 0.1;
-    // this.layoutEngine.trigger({type:'start', alpha:this.layoutEngine._alpha});
-    for(var i = 0; i < 5; ++i)
-        if(this.layoutEngine.tick())
-            break;
+module.exports.prototype.tickWire = function (wire) {
+  const src = wire.srcSocket.circle, dst = wire.dstSocket.circle;
+  switch (this.config.wireStyle) {
+    case 'straight':
+      wire.path.setAttribute('d', 'M' + src.x + ',' + src.y + 'L' + dst.x + ',' + dst.y);
+      break;
+    case 'vertical':
+      wire.path.setAttribute('d', 'M' + src.x + ',' + src.y + 'C' + dst.x + ',' + src.y + ' ' + src.x + ',' + dst.y + ' ' + dst.x + ',' + dst.y);
+      break;
+    case 'horizontal':
+      wire.path.setAttribute('d', 'M' + src.x + ',' + src.y + 'C' + src.x + ',' + dst.y + ' ' + dst.x + ',' + src.y + ' ' + dst.x + ',' + dst.y);
+      break;
+    case 'hybrid':
+      if (Math.abs(src.x - dst.x) < Math.abs(src.y - dst.y))
+        wire.path.setAttribute('d', 'M' + src.x + ',' + src.y + 'C' + dst.x + ',' + src.y + ' ' + src.x + ',' + dst.y + ' ' + dst.x + ',' + dst.y);
+      else
+        wire.path.setAttribute('d', 'M' + src.x + ',' + src.y + 'C' + src.x + ',' + dst.y + ' ' + dst.x + ',' + src.y + ' ' + dst.x + ',' + dst.y);
+      break;
+    case 'gravity':
+      const diffX = dst.x - src.x;
+      const maxY = Math.max(dst.y, src.y) + 20;
+      wire.path.setAttribute('d', 'M' + src.x + ',' + src.y + 'C' + (src.x + diffX * 0.25) + ',' + maxY + ' ' + (src.x + diffX * 0.75) + ',' + maxY + ' ' + dst.x + ',' + dst.y);
+      break;
+  }
+};
 
-    var trash = new Set;
-    for(var j = 0; j < this.panels.length; ++j) {
-        var panel = this.panels[j];
-        if(panel.deathFlag) {
-            if(panel.socket)
-                this.deleteSocket(panel.socket);
-            for(var i = 0; i < panel.leftSide.length; ++i)
-                this.deleteSocket(panel.leftSide[i].socket);
-            for(var i = 0; i < panel.rightSide.length; ++i)
-                this.deleteSocket(panel.rightSide[i].socket);
-            this.dirtyFlag = true;
-            trash.add(panel.group);
-            this.panels.splice(j, 1);
-            --j;
-            continue;
-        }
-        var posX = panel.x-panel.width/2,
-              posY = panel.y-panel.height/2;
-        panel.group.setAttribute('transform', 'translate('+posX+', '+posY+')');
-        if(panel.socket)
-            this.tickSocket(posX, posY, panel.socket);
-        for(var i = 0; i < panel.leftSide.length; ++i)
-            this.tickSocket(posX, posY, panel.leftSide[i].socket);
-        for(var i = 0; i < panel.rightSide.length; ++i)
-            this.tickSocket(posX, posY, panel.rightSide[i].socket);
+module.exports.prototype.tickGraph = function () {
+  this.layoutEngine._running = true;
+  this.layoutEngine._alpha = 0.1;
+  for (let i = 0; i < 5; ++i)
+    if (this.layoutEngine.tick())
+      break;
+
+  let trash = new Set();
+  for (let j = 0; j < this.panels.length; ++j) {
+    const panel = this.panels[j];
+    if (panel.deathFlag) {
+      this.selection.panels.delete(panel);
+      if (panel.circle)
+        this.deleteSocket(panel);
+      for (let i = 0; i < panel.leftSide.length; ++i)
+        this.deleteSocket(panel.leftSide[i]);
+      for (let i = 0; i < panel.rightSide.length; ++i)
+        this.deleteSocket(panel.rightSide[i]);
+      this.dirtyFlag = true;
+      trash.add(panel.group);
+      this.panels.splice(j, 1);
+      --j;
+      continue;
     }
 
-    for(var wire of this.wires) {
-        if(wire.deathFlag) {
-            this.dirtyFlag = true;
-            trash.add(wire.path);
-            this.disconnectSockets(wire, wire.srcSocket, wire.dstPanel);
-            this.disconnectSockets(wire, wire.dstSocket, wire.srcPanel);
-            if(wire.srcPanel != wire.dstPanel) {
-                this.disconnectPanels(wire.srcPanel, wire.dstPanel);
-                this.disconnectPanels(wire.dstPanel, wire.srcPanel);
-            }
-            this.wires.delete(wire);
-            continue;
-        }
-        switch(this.config.wireStyle) {
-            case 'straight':
-                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'L'+wire.dstSocket.x+','+wire.dstSocket.y);
-                break;
-            case 'vertical':
-                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
-                break;
-            case 'horizontal':
-                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
-                break;
-            case 'hybrid':
-                if(Math.abs(wire.srcSocket.x-wire.dstSocket.x) < Math.abs(wire.srcSocket.y-wire.dstSocket.y))
-                    wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
-                else
-                    wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+wire.srcSocket.x+','+wire.dstSocket.y+' '+wire.dstSocket.x+','+wire.srcSocket.y+' '+wire.dstSocket.x+','+wire.dstSocket.y);
-                    break;
-            case 'gravity':
-                var diffX = wire.dstSocket.x-wire.srcSocket.x;
-                var maxY = Math.max(wire.dstSocket.y, wire.srcSocket.y)+20;
-                wire.path.setAttribute('d', 'M'+wire.srcSocket.x+','+wire.srcSocket.y+'C'+(wire.srcSocket.x+diffX*0.25)+','+maxY+' '+(wire.srcSocket.x+diffX*0.75)+','+maxY+' '+wire.dstSocket.x+','+wire.dstSocket.y);
-                break;
-        }
-    }
+    const posX = panel.x - panel.width / 2,
+          posY = panel.y - panel.height / 2;
+    panel.group.setAttribute('transform', 'translate(' + posX + ', ' + posY + ')');
+    if (panel.circle)
+      this.tickSocket(posX, posY, panel);
+    for (let i = 0; i < panel.leftSide.length; ++i)
+      this.tickSocket(posX, posY, panel.leftSide[i]);
+    for (let i = 0; i < panel.rightSide.length; ++i)
+      this.tickSocket(posX, posY, panel.rightSide[i]);
+  }
 
-    for(var element of trash) {
-        element.classList.remove('fadeIn');
-        element.classList.add('fadeOut');
+  for (const wire of this.wires) {
+    if (wire.deathFlag) {
+      this.selection.wires.delete(wire);
+      this.dirtyFlag = true;
+      trash.add(wire.path);
+      if(wire.srcPanel && wire.dstPanel) {
+        this.disconnectSockets(wire, wire.srcSocket, wire.dstPanel);
+        this.disconnectSockets(wire, wire.dstSocket, wire.srcPanel);
+        if (wire.srcPanel != wire.dstPanel) {
+          this.disconnectPanels(wire.srcPanel, wire.dstPanel);
+          this.disconnectPanels(wire.dstPanel, wire.srcPanel);
+        }
+      }
+      this.wires.delete(wire);
+      continue;
     }
-    window.setTimeout(function() {
-        for(var element of trash)
-            element.parentNode.removeChild(element);
-    }.bind(this), 250);
+    this.tickWire(wire);
+  }
 
-    this.syncGraph();
+  this.deleteElements(trash);
+  this.syncGraph();
 };
 
-module.exports.prototype.handleKeyboard = function(event) {
-    var rect = this.svg.getBoundingClientRect();
-    if(!this.cursorPanel || rect.width == 0 || rect.height == 0)
-        return;
+module.exports.prototype.deleteElements = function (trash) {
+  for (const element of trash) {
+    element.classList.remove('fadeIn');
+    element.classList.add('fadeOut');
+  }
+
+  window.setTimeout(function () {
+    for (const element of trash)
+      element.parentNode.removeChild(element);
+  }.bind(this), 250);
+};
+
+module.exports.prototype.handleKeyboard = function (event) {
+  const rect = this.svg.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0 || event.ctrlKey)
+    return;
+  event.stopPropagation();
+  event.preventDefault();
+  switch (event.keyCode) {
+    case 8:
+      this.iterateSelection(function(type, element, node) {
+        if (node.ondeletion)
+          node.ondeletion(type, element, node);
+      });
+      this.deselectAll();
+      break;
+    case 13:
+      this.iterateSelection(function(type, element, node) {
+        if (node.onactivation)
+          node.onactivation(type, element, node);
+      });
+      break;
+    case 37:
+      break;
+    case 38:
+      break;
+    case 39:
+      break;
+    case 40:
+      break;
+  }
+};
+
+module.exports.prototype.setHandlers = function (type, element, node) {
+  element.onclick = function (event) {
+    if (event.shiftKey)
+      return true;
+    if (node.onactivation)
+      node.onactivation(type, element, node);
     event.stopPropagation();
-    if(event.keyCode == 13 && this.cursorSocket.onactivation) {
-        this.cursorSocket.onactivation(event);
-        return false;
-    }
-    var index = this.getIndexOfSocket(this.cursorPanel, this.cursorSocket);
-    if(index < 0) {
-        switch(event.keyCode) {
-            case 37:
-                this.cursorFollowWire();
-                return false;
-            case 38:
-                this.setCursorIndex(index+1);
-                return false;
-            case 39:
-                this.setCursorIndex(-index);
-                return false;
-            case 40:
-                this.setCursorIndex(index-1);
-                return false;
-        }
-    } else if(index > 0) {
-        switch(event.keyCode) {
-            case 37:
-                this.setCursorIndex(-index);
-                return false;
-            case 38:
-                this.setCursorIndex(index-1);
-                return false;
-            case 39:
-                this.cursorFollowWire();
-                return false;
-            case 40:
-                this.setCursorIndex(index+1);
-                return false;
-        }
-    } else {
-        switch(event.keyCode) {
-            case 37:
-                this.setCursorIndex(index-1);
-                return false;
-            case 38:
-                this.cursorFollowWire();
-                return false;
-            case 39:
-                this.setCursorIndex(index+1);
-                return false;
-            case 40:
-                return false;
-        }
-    }
     return true;
-};
-
-module.exports.prototype.createElement = function(tag, parentNode) {
-    var element = document.createElementNS(this.svg.namespaceURI, tag);
-    parentNode.appendChild(element);
-    return element;
-};
-
-module.exports.prototype.setActivationHandlers = function(element) {
-    var activation = function(event) {
-        if(element.onactivation)
-            element.onactivation(event);
-        return false;
-    }.bind(this);
-    element.onmousedown = activation;
-    element.ontouchstart = activation;
-};
-
-module.exports.prototype.syncPanelSide = function(width, side, isLeft) {
-    for(var i = 0; i < side.length; ++i) {
-        var segment = side[i];
-        if(segment.deathFlag) {
-            this.deleteSocket(segment.socket);
-            side.group.removeChild(side.group.childNodes[i*2+1]);
-            side.group.removeChild(side.group.childNodes[i*2]);
-            side.splice(i, 1);
-            --i;
-            continue;
-        }
-
-        if(!segment.socket) {
-            segment.socket = this.createElement('circle', side.group);
-            segment.socket.classList.add('socket');
-            segment.socket.wiresPerPanel = new Map;
-            segment.socket.setAttribute('r', this.config.socketRadius);
-            this.setActivationHandlers(segment.socket);
-            segment.label = this.createElement('text', side.group);
-            segment.label.setAttribute('text-anchor', (isLeft) ? 'start' : 'end');
-            segment.label.textContent = 'undefined';
-            this.setActivationHandlers(segment.label);
-        }
-        var posY = (i+1)*this.config.panelPadding*2;
-
-        segment.socket.x = Math.round((isLeft) ? this.config.panelPadding : width-this.config.panelPadding);
-        segment.socket.y = Math.round(posY+this.config.panelPadding);
-        segment.socket.setAttribute('cx', segment.socket.x);
-        segment.socket.setAttribute('cy', segment.socket.y);
-
-        segment.label.setAttribute('x', Math.round((isLeft) ? this.config.panelPadding*2 : width-this.config.panelPadding*2));
-        segment.label.setAttribute('y', Math.round(posY+this.config.panelPadding+this.config.fontSize*0.4));
+  }.bind(this);
+  element.onmousedown = function (event) {
+    if (event.shiftKey) {
+      this.setSelected(type, element, node, 'toggle');
+      return true;
     }
+    switch (type) {
+      case 'panels':
+        this.setSelected(type, element, node, true);
+        this.dragging = new Map();
+        this.selection.panels.forEach(function (node) {
+          let dragging = {};
+          this.dragging.set(node, dragging);
+          this.transformPanelMousePos(event, '', dragging, 'p', node);
+          colaLayout.dragStart(node);
+        }, this);
+        break;
+      case 'sockets':
+        this.dragging = {type: node.type, srcSocket: node, dstSocket: {circle: {}}};
+        break;
+    }
+    event.stopPropagation();
+    return true;
+  }.bind(this);
+  element.onmouseup = function (event) {
+    if (this.dragging && this.dragging.path) {
+      if (node.onwireconnect)
+        node.onwireconnect(type, element, node, this.dragging);
+    }
+  }.bind(this);
+  element.ontouchstart = function (event) {
+    return element.onmousedown(event.touches[0]);
+  }.bind(this);
+  element.ontouchstop = function (event) {
+    return element.onmouseup(event.touches[0]);
+  }.bind(this);
 };
 
-module.exports.prototype.syncPanel = function(panel) {
-    var segmentCount = Math.max(panel.leftSide.length, panel.rightSide.length);
-    var width = 200;
-    var height = (segmentCount+1)*this.config.panelPadding*2;
+module.exports.prototype.createElement = function (tag, parentNode) {
+  const element = document.createElementNS(this.svg.namespaceURI, tag);
+  parentNode.appendChild(element);
+  return element;
+};
 
-    if(!panel.group) {
-        panel.group = this.createElement('g', this.panelsGroup);
-        panel.group.classList.add('fadeIn');
+module.exports.prototype.setSelected = function (type, element, node, newValue) {
+  const oldValue = this.selection[type].has(node);
+  if (newValue == oldValue)
+    return oldValue;
+  if (newValue == 'toggle')
+    newValue = !oldValue;
+  if (newValue) {
+    this.selection[type].add(node);
+    element.classList.add('selected');
+  } else {
+    this.selection[type].delete(node);
+    element.classList.remove('selected');
+  }
+  return newValue;
+};
 
-        panel.group.onmousedown = function(event) {
-            this.panelToDrag = panel;
-            colaLayout.dragStart(panel);
-            return false;
-        }.bind(this);
-        panel.group.ontouchstart = function(event) {
-            return panel.group.onmousedown(event.touches[0]);
-        }.bind(this);
-        panel.group.onmouseover = colaLayout.mouseOver.bind(colaLayout, panel);
-        panel.group.onmouseout = colaLayout.mouseOut.bind(colaLayout, panel);
+module.exports.prototype.iterateSelection = function (callback) {
+  for (let socket of this.selection.sockets)
+    callback('sockets', socket.circle, socket);
+  for (let wire of this.selection.wires)
+    callback('wires', wire.path, wire);
+  for (let panel of this.selection.panels)
+    callback('panels', panel.rect, panel);
+};
 
-        panel.rect = this.createElement('rect', panel.group);
-        panel.rect.classList.add('panel');
-        panel.rect.setAttribute('rx', this.config.panelCornerRadius);
-        panel.rect.setAttribute('ry', this.config.panelCornerRadius);
+module.exports.prototype.deselectAll = function () {
+  this.iterateSelection(function(type, element, node) {
+    element.classList.remove('selected');
+  });
+  this.selection.sockets.clear();
+  this.selection.wires.clear();
+  this.selection.panels.clear();
+};
 
-        if(this.config.headSocket) {
-            panel.socket = this.createElement('circle', panel.group);
-            panel.socket.classList.add('socket');
-            panel.socket.wiresPerPanel = new Map;
-            panel.socket.y = Math.round(-this.config.panelPadding);
-            panel.socket.setAttribute('cy', panel.socket.y);
-            panel.socket.setAttribute('r', this.config.socketRadius);
-            this.setActivationHandlers(panel.socket);
-        }
-
-        panel.label = this.createElement('text', panel.group);
-        panel.label.setAttribute('text-anchor', 'middle');
-        panel.label.setAttribute('y', Math.round(this.config.panelPadding+this.config.fontSize*0.4));
-        panel.label.textContent = 'undefined';
-        this.setActivationHandlers(panel.label);
-
-        panel.leftSide.group = this.createElement('g', panel.group);
-        panel.rightSide.group = this.createElement('g', panel.group);
-        if(this.config.segmentLines) {
-            panel.lines = [];
-            panel.lines.group = this.createElement('g', panel.group);
-            panel.lines.group.classList.add('panel');
-        }
+module.exports.prototype.syncPanelSide = function (width, side, isLeft) {
+  for (let i = 0; i < side.length; ++i) {
+    const socket = side[i];
+    if (socket.deathFlag) {
+      this.deleteSocket(socket);
+      side.group.removeChild(side.group.childNodes[i * 2 + 1]);
+      side.group.removeChild(side.group.childNodes[i * 2]);
+      side.splice(i, 1);
+      --i;
+      continue;
     }
 
-    panel.rect.setAttribute('width', width);
-    panel.rect.setAttribute('height', height);
-    var halfWidth = Math.round(width/2);
-    if(panel.socket)
-        panel.socket.setAttribute('cx', halfWidth);
-    panel.label.setAttribute('x', halfWidth);
+    if (!socket.circle) {
+      socket.circle = this.createElement('circle', side.group);
+      socket.circle.classList.add('socket');
+      socket.circle.classList.add(socket.type);
+      socket.circle.setAttribute('r', this.config.socketRadius);
+      this.setHandlers('sockets', socket.circle, socket);
+      socket.label = this.createElement('text', side.group);
+      socket.label.setAttribute('text-anchor', (isLeft) ? 'start' : 'end');
+      socket.label.textContent = 'undefined';
+      socket.wiresPerPanel = new Map();
+    }
+    const posY = (i + 1) * this.config.panelPadding * 2;
 
-    this.syncPanelSide(width, panel.leftSide, true);
-    this.syncPanelSide(width, panel.rightSide, false);
-    if(panel.lines) {
-        for(var i = panel.lines.group.childNodes.length-1; i >= segmentCount; --i)
-            panel.lines.group.removeChild(panel.lines.group.childNodes[i]);
-        panel.lines.splice(segmentCount);
+    socket.circle.x = Math.round((isLeft) ? this.config.panelPadding : width - this.config.panelPadding);
+    socket.circle.y = Math.round(posY + this.config.panelPadding);
+    socket.circle.setAttribute('cx', socket.circle.x);
+    socket.circle.setAttribute('cy', socket.circle.y);
 
-        for(var i = panel.lines.group.childNodes.length; i < segmentCount; ++i) {
-            var posY = (i+1)*this.config.panelPadding*2;
-            panel.lines[i] = this.createElement('path', panel.lines.group);
-            panel.lines[i].setAttribute('d', 'M0,'+posY+'h'+width);
-        }
+    socket.label.setAttribute('x', Math.round((isLeft) ? this.config.panelPadding * 2 : width - this.config.panelPadding * 2));
+    socket.label.setAttribute('y', Math.round(posY + this.config.panelPadding + this.config.fontSize * 0.4));
+  }
+};
+
+module.exports.prototype.syncPanel = function (panel) {
+  const socketCount = Math.max(panel.leftSide.length, panel.rightSide.length);
+  const width = 200;
+  const height = (socketCount + 1) * this.config.panelPadding * 2;
+
+  if (!panel.group) {
+    panel.group = this.createElement('g', this.panelsGroup);
+    panel.group.classList.add('fadeIn');
+
+    panel.rect = this.createElement('rect', panel.group);
+    panel.rect.classList.add('panel');
+    panel.rect.classList.add(panel.type);
+    panel.rect.setAttribute('rx', this.config.panelCornerRadius);
+    panel.rect.setAttribute('ry', this.config.panelCornerRadius);
+
+    this.setHandlers('panels', panel.rect, panel);
+    panel.rect.onmouseover = colaLayout.mouseOver.bind(colaLayout, panel);
+    panel.rect.onmouseout = colaLayout.mouseOut.bind(colaLayout, panel);
+
+    if (this.config.headSocket) {
+      panel.circle = this.createElement('circle', panel.group);
+      panel.circle.classList.add('socket');
+      panel.circle.classList.add(panel.type);
+      panel.circle.y = Math.round(-this.config.panelPadding);
+      panel.circle.setAttribute('cy', panel.circle.y);
+      panel.circle.setAttribute('r', this.config.socketRadius);
+      this.setHandlers('sockets', panel.circle, panel);
+      panel.wiresPerPanel = new Map();
     }
 
-    panel.width = width+this.config.panelMargin;
-    panel.height = height+this.config.panelMargin;
+    panel.label = this.createElement('text', panel.group);
+    panel.label.setAttribute('text-anchor', 'middle');
+    panel.label.setAttribute('y', Math.round(this.config.panelPadding + this.config.fontSize * 0.4));
+    panel.label.textContent = 'undefined';
+
+    panel.leftSide.group = this.createElement('g', panel.group);
+    panel.rightSide.group = this.createElement('g', panel.group);
+    if (this.config.panelLines) {
+      panel.lines = [];
+      panel.lines.group = this.createElement('g', panel.group);
+      panel.lines.group.classList.add('panel');
+      panel.lines.group.classList.add(panel.type);
+    }
+  }
+
+  panel.rect.setAttribute('width', width);
+  panel.rect.setAttribute('height', height);
+  const halfWidth = Math.round(width / 2);
+  if (panel.circle)
+    panel.circle.setAttribute('cx', halfWidth);
+  panel.label.setAttribute('x', halfWidth);
+
+  this.syncPanelSide(width, panel.leftSide, true);
+  this.syncPanelSide(width, panel.rightSide, false);
+  if (panel.lines) {
+    for (let i = panel.lines.group.childNodes.length - 1; i >= socketCount; --i)
+      panel.lines.group.removeChild(panel.lines.group.childNodes[i]);
+    panel.lines.splice(socketCount);
+
+    for (let i = panel.lines.group.childNodes.length; i < socketCount; ++i) {
+      const posY = (i + 1) * this.config.panelPadding * 2;
+      panel.lines[i] = this.createElement('path', panel.lines.group);
+      panel.lines[i].setAttribute('d', 'M0,' + posY + 'h' + width);
+    }
+  }
+
+  panel.width = width + this.config.panelMargin;
+  panel.height = height + this.config.panelMargin;
+  return panel;
+};
+
+module.exports.prototype.initializePanel = function (panel) {
+  panel.interPanelLinks = new Map();
+  this.syncPanel(panel);
+  this.panels.push(panel);
+  this.dirtyFlag = true;
+  return panel;
+};
+
+module.exports.prototype.createPanelHelper = function (segementsLeft, segementsRight) {
+  const panel = {};
+  panel.leftSide = Array(segementsLeft);
+  for (let i = 0; i < segementsLeft; ++i)
+    panel.leftSide[i] = {};
+  panel.rightSide = Array(segementsRight);
+  for (let i = 0; i < segementsRight; ++i)
+    panel.rightSide[i] = {};
+  return this.initializePanel(panel);
+};
+
+module.exports.prototype.getSocketAtIndex = function (panel, index) {
+  if (index < 0)
+    return panel.leftSide[-index-1];
+  else if (index > 0)
+    return panel.rightSide[index-1];
+  else
     return panel;
 };
 
-module.exports.prototype.initializePanel = function(panel) {
-    panel.interPanelLinks = new Map;
-    this.syncPanel(panel);
-    this.panels.push(panel);
-    this.dirtyFlag = true;
-    return panel;
+module.exports.prototype.getIndexOfSocket = function (panel, socket) {
+  if (panel === socket)
+    return 0;
+  for (let i = 0; i < panel.leftSide.length; ++i)
+    if (panel.leftSide[i] === socket)
+      return -i - 1;
+  for (let i = 0; i < panel.rightSide.length; ++i)
+    if (panel.rightSide[i] === socket)
+      return i + 1;
+  return undefined;
 };
 
-module.exports.prototype.createPanelHelper = function(segementsLeft, segementsRight) {
-    var panel = {};
-    panel.leftSide = Array(segementsLeft);
-    for(var i = 0; i < segementsLeft; ++i)
-        panel.leftSide[i] = {};
-    panel.rightSide = Array(segementsRight);
-    for(var i = 0; i < segementsRight; ++i)
-        panel.rightSide[i] = {};
-    return this.initializePanel(panel);
+module.exports.prototype.connectPanels = function (srcPanel, dstPanel) {
+  let entry = srcPanel.interPanelLinks.get(dstPanel);
+  if (entry)
+    ++entry.arc;
+  else {
+    entry = {
+      arc: 1
+    };
+    srcPanel.interPanelLinks.set(dstPanel, entry);
+  }
+  return entry;
 };
 
-module.exports.prototype.hasSocketAtIndex = function(panel, index) {
-    if(index < 0)
-        return panel.leftSide[-index-1] != undefined;
-    else if(index > 0)
-        return panel.rightSide[index-1] != undefined;
-    else
-        return panel.socket != undefined;
+module.exports.prototype.disconnectPanels = function (srcPanel, dstPanel) {
+  const entry = srcPanel.interPanelLinks.get(dstPanel);
+  if (entry.arc > 1)
+    --entry.arc;
+  else {
+    if (entry.wire)
+      this.layoutEngine._links.splice(this.layoutEngine._links.indexOf(entry.wire), 1);
+    srcPanel.interPanelLinks.delete(dstPanel);
+  }
 };
 
-module.exports.prototype.getSocketAtIndex = function(panel, index) {
-    if(index < 0)
-        return panel.leftSide[-index-1].socket;
-    else if(index > 0)
-        return panel.rightSide[index-1].socket;
-    else
-        return panel.socket;
+module.exports.prototype.connectSockets = function (wire, srcSocket, dstPanel) {
+  let set;
+  if (!srcSocket.wiresPerPanel.has(dstPanel)) {
+    set = new Set();
+    srcSocket.wiresPerPanel.set(dstPanel, set);
+  } else {
+    set = srcSocket.wiresPerPanel.get(dstPanel);
+    if (set.has(wire))
+      return false;
+  }
+  set.add(wire);
+  return true;
 };
 
-module.exports.prototype.getIndexOfSocket = function(panel, socket) {
-    if(panel.socket == socket)
-        return 0;
-    for(var i = 0; i < panel.leftSide.length; ++i)
-        if(panel.leftSide[i].socket == socket)
-            return -i-1;
-    for(var i = 0; i < panel.rightSide.length; ++i)
-        if(panel.rightSide[i].socket == socket)
-            return i+1;
-    return undefined;
+module.exports.prototype.disconnectSockets = function (wire, srcSocket, dstPanel) {
+  if (!srcSocket.wiresPerPanel.has(dstPanel))
+    return false;
+  const set = srcSocket.wiresPerPanel.get(dstPanel);
+  if (!set.has(wire))
+    return false;
+  set.delete(wire);
+  if (set.size === 0)
+    srcSocket.wiresPerPanel.delete(dstPanel);
+  return true;
 };
 
-module.exports.prototype.connectPanels = function(srcPanel, dstPanel) {
-    var entry = srcPanel.interPanelLinks.get(dstPanel);
-    if(entry)
-        ++entry.arc;
-    else {
-        entry = {arc:1};
-        srcPanel.interPanelLinks.set(dstPanel, entry);
+module.exports.prototype.initializeWire = function (wire) {
+  if (wire.srcPanel && wire.dstPanel) {
+    if (!this.connectSockets(wire, wire.srcSocket, wire.dstPanel) ||
+        !this.connectSockets(wire, wire.dstSocket, wire.srcPanel))
+      return;
+    if (wire.srcPanel != wire.dstPanel) {
+      const entry = this.connectPanels(wire.srcPanel, wire.dstPanel);
+      this.connectPanels(wire.dstPanel, wire.srcPanel);
+      if (entry.arc == 1) {
+        entry.wire = {
+          source: wire.srcPanel,
+          target: wire.dstPanel
+        };
+        this.layoutEngine._links.push(entry.wire);
+      }
     }
-    return entry;
+  }
+  wire.path = this.createElement('path', this.wiresGroup);
+  wire.path.classList.add('wire');
+  wire.path.classList.add('fadeIn');
+  wire.path.classList.add(wire.type);
+  this.setHandlers('wires', wire.path, wire);
+  this.wires.add(wire);
+  this.dirtyFlag = true;
+  return wire;
 };
 
-module.exports.prototype.disconnectPanels = function(srcPanel, dstPanel) {
-    var entry = srcPanel.interPanelLinks.get(dstPanel);
-    if(entry.arc > 1)
-        --entry.arc;
-    else {
-        if(entry.wire)
-            this.layoutEngine._links.splice(this.layoutEngine._links.indexOf(entry.wire), 1);
-        srcPanel.interPanelLinks.delete(dstPanel);
-    }
+module.exports.prototype.delete = function (element) {
+  element.deathFlag = true;
+  this.dirtyFlag = true;
 };
 
-module.exports.prototype.connectSockets = function(wire, srcSocket, dstPanel) {
-    var set = undefined;
-    if(!srcSocket.wiresPerPanel.has(dstPanel)) {
-        set = new Set;
-        srcSocket.wiresPerPanel.set(dstPanel, set);
-    } else {
-        set = srcSocket.wiresPerPanel.get(dstPanel);
-        if(set.has(wire))
-            return false;
-    }
-    set.add(wire);
-    return true;
+module.exports.prototype.createWireHelper = function (type, srcPanel, dstPanel, srcIndex, dstIndex) {
+  const wire = { type: type, srcPanel: srcPanel, dstPanel: dstPanel };
+  wire.srcSocket = this.getSocketAtIndex(wire.srcPanel, srcIndex);
+  wire.dstSocket = this.getSocketAtIndex(wire.dstPanel, dstIndex);
+  return this.initializeWire(wire);
 };
 
-module.exports.prototype.disconnectSockets = function(wire, srcSocket, dstPanel) {
-    if(!srcSocket.wiresPerPanel.has(dstPanel))
-        return false;
-    var set = srcSocket.wiresPerPanel.get(dstPanel);
-    if(!set.has(wire))
-        return false;
-    set.delete(wire);
-    if(set.size == 0)
-        srcSocket.wiresPerPanel.delete(dstPanel);
-    return true;
+module.exports.prototype.syncGraph = function () {
+  if (!this.dirtyFlag)
+    return;
+  this.dirtyFlag = false;
+  const rect = this.svg.getBoundingClientRect();
+  this.layoutEngine.size([rect.width, rect.height]);
+  this.layoutEngine.start();
+  this.tickGraph();
 };
 
-module.exports.prototype.initializeWire = function(wire) {
-    if(!this.connectSockets(wire, wire.srcSocket, wire.dstPanel))
-        return;
-    this.connectSockets(wire, wire.dstSocket, wire.srcPanel);
-    wire.path = this.createElement('path', this.wiresGroup);
-    wire.path.classList.add('wire');
-    wire.path.classList.add('fadeIn');
-    if(wire.srcPanel != wire.dstPanel) {
-        var entry = this.connectPanels(wire.srcPanel, wire.dstPanel);
-        this.connectPanels(wire.dstPanel, wire.srcPanel);
-        if(entry.arc == 1) {
-            entry.wire = {source:wire.srcPanel, target:wire.dstPanel};
-            this.layoutEngine._links.push(entry.wire);
-        }
-    }
-    this.wires.add(wire);
-    this.dirtyFlag = true;
-    return wire;
-};
-
-module.exports.prototype.delete = function(element) {
-    element.deathFlag = true;
-    this.dirtyFlag = true;
-};
-
-module.exports.prototype.createWireHelper = function(srcPanel, dstPanel, srcIndex, dstIndex) {
-    var wire = {};
-    wire.srcPanel = srcPanel;
-    wire.dstPanel = dstPanel;
-    wire.srcSocket = this.getSocketAtIndex(wire.srcPanel, srcIndex);
-    wire.dstSocket = this.getSocketAtIndex(wire.dstPanel, dstIndex);
-    return this.initializeWire(wire);
-};
-
-module.exports.prototype.syncGraph = function() {
-    if(!this.dirtyFlag)
-        return;
-    this.dirtyFlag = false;
-    var rect = this.svg.getBoundingClientRect();
-    this.layoutEngine.size([rect.width, rect.height]);
-    this.layoutEngine.start();
-    this.tickGraph();
-};
-
-module.exports.prototype.setCursorSocket = function(socket) {
-    if(this.cursorSocket)
-        this.cursorSocket.classList.remove('cursor');
-    this.cursorSocket = socket;
-    if(socket)
-        this.cursorSocket.classList.add('cursor');
-};
-
-module.exports.prototype.setCursorIndex = function(index) {
-    if(!this.cursorPanel || !this.hasSocketAtIndex(this.cursorPanel, index))
-        return false;
-    this.setCursorSocket(this.getSocketAtIndex(this.cursorPanel, index));
-    return true;
-};
-
-module.exports.prototype.cursorFollowWire = function() {
-    if(!this.cursorPanel || this.cursorSocket.wiresPerPanel.size != 1)
-        return false;
-    var set = this.cursorSocket.wiresPerPanel.values().next().value;
-    if(set.size != 1)
-        return false;
-    var wire = set.values().next().value;
-    this.cursorPanel = (this.cursorPanel == wire.srcPanel) ? wire.dstPanel : wire.srcPanel;
-    this.setCursorSocket((this.cursorSocket == wire.srcSocket) ? wire.dstSocket : wire.srcSocket);
-    return true;
-};
-
-},{"webcola":3}],3:[function(require,module,exports){
+},{"webcola":4}],4:[function(require,module,exports){
 var cola;
 (function (cola) {
     var packingOptions = {
@@ -877,7 +1115,7 @@ var cola;
             }
             return Math.abs(get_real_ratio() - desired_ratio);
         }
-        // looking for a position to one box
+        // looking for a position to one box 
         function put_rect(rect, max_width) {
             var parent = undefined;
             for (var i = 0; i < line.length; i++) {
@@ -1094,7 +1332,7 @@ var cola;
             };
             // calculate lagrangian multipliers on constraints and
             // find the active constraint in this block with the smallest lagrangian.
-            // if the lagrangian is negative, then the constraint is a split candidate.
+            // if the lagrangian is negative, then the constraint is a split candidate.  
             Block.prototype.findMinLM = function () {
                 var m = null;
                 this.compute_lm(this.vars[0], null, function (c) {
@@ -1253,7 +1491,7 @@ var cola;
             Blocks.prototype.updateBlockPositions = function () {
                 this.list.forEach(function (b) { return b.updateWeightedPosition(); });
             };
-            // split each block across its constraint with the minimum lagrangian
+            // split each block across its constraint with the minimum lagrangian 
             Blocks.prototype.split = function (inactive) {
                 var _this = this;
                 this.updateBlockPositions();
@@ -1309,7 +1547,7 @@ var cola;
                     private getId(v: Variable): number {
                         return this.vs.indexOf(v);
                     }
-
+            
                     // sanity check of the index integrity of the inactive list
                     checkInactive(): void {
                         var inactiveCount = 0;
@@ -4001,8 +4239,8 @@ var cola;
             Calculator.prototype.PathFromNodeToNode = function (start, end) {
                 return this.dijkstraNeighbours(start, end);
             };
-            // find shortest path from start to end, with the opportunity at
-            // each edge traversal to compute a custom cost based on the
+            // find shortest path from start to end, with the opportunity at 
+            // each edge traversal to compute a custom cost based on the 
             // previous edge.  For example, to penalise bends.
             Calculator.prototype.PathFromNodeToNodeWithPrevCost = function (start, end, prevCost) {
                 var q = new PriorityQueue(function (a, b) { return a.d <= b.d; }), u = this.neighbours[start], qu = new QueueEntry(u, null, 0), visitedFrom = {};
@@ -4799,7 +5037,7 @@ var cola;
             this.groups = this.nodes.filter(function (g) { return !g.leaf; });
             this.cols = this.getGridLines('x');
             this.rows = this.getGridLines('y');
-            // create parents for each node or group that is a member of another's children
+            // create parents for each node or group that is a member of another's children 
             this.groups.forEach(function (v) {
                 return v.children.forEach(function (c) { return _this.nodes[c].parent = v; });
             });
@@ -4989,7 +5227,7 @@ var cola;
             return vsegmentsets;
         };
         // for all segments in this bundle create a vpsc problem such that
-        // each segment's x position is a variable and separation constraints
+        // each segment's x position is a variable and separation constraints 
         // are given by the partial order over the edges to which the segments belong
         // for each pair s1,s2 of segments in the open set:
         //   e1 = edge of s1, e2 = edge of s2
@@ -5146,7 +5384,7 @@ var cola;
                     if (lcs.length === 0)
                         continue; // no common subpath
                     if (lcs.reversed) {
-                        // if we found a common subpath but one of the edges runs the wrong way,
+                        // if we found a common subpath but one of the edges runs the wrong way, 
                         // then reverse f.
                         f.reverse();
                         f.reversed = true;
@@ -5161,7 +5399,7 @@ var cola;
                     if (lcs.si + lcs.length >= e.length || lcs.ti + lcs.length >= f.length) {
                         // if the common subsequence of the
                         // two edges being considered goes all the way to the
-                        // end of one (or both) of the lines then we have to
+                        // end of one (or both) of the lines then we have to 
                         // base our ordering decision on the other end of the
                         // common subsequence
                         u = e[lcs.si + 1];
@@ -5428,7 +5666,7 @@ var cola;
             this.descent = new cola.Descent(this.result, D);
             this.descent.threshold = 1e-3;
             this.descent.G = G;
-            //var constraints = this.links.map(e=> <any>{
+            //let constraints = this.links.map(e=> <any>{
             //    axis: 'y', left: e.source, right: e.target, gap: e.length*1.5
             //});
             if (this.constraints)
@@ -5499,5 +5737,98 @@ var cola;
 // TypeScript's model is that the current context is the global context (i.e., window.cola
 // === cola), so `export = cola` is transpiled as a no-op.
 module.exports = cola;
+
+},{}],5:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = setTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    clearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        setTimeout(drainQueue, 0);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
 
 },{}]},{},[1]);
