@@ -573,10 +573,10 @@ module.exports = function (parentElement) {
 
   const blurFilter = this.createElement('filter', svgDefs);
   blurFilter.setAttribute('id', 'blurFilter');
-  blurFilter.setAttribute('x', -0.5);
-  blurFilter.setAttribute('y', -0.5);
-  blurFilter.setAttribute('width', 4);
-  blurFilter.setAttribute('height', 4);
+  blurFilter.setAttribute('x', -10);
+  blurFilter.setAttribute('y', -10);
+  blurFilter.setAttribute('width', 20);
+  blurFilter.setAttribute('height', 20);
   const feGaussianBlur = this.createElement('feGaussianBlur', blurFilter);
   feGaussianBlur.setAttribute('in', 'SourceGraphic');
   feGaussianBlur.setAttribute('result', 'blur');
