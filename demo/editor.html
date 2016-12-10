@@ -1,0 +1,60 @@
+<meta charset="UTF-8" />
+<html>
+    <head>
+        <link rel="stylesheet" href="../public/plugins/prism/prism.css">
+        <link rel="stylesheet" href="../public/css/OntologyEditor.css">
+        <script type="text/javascript" src="../public/plugins/prism/prism.js"></script>
+        <style>
+            body {
+                padding: 15px;
+                font-family: Helvetica;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Symatem Ontology Editor</h1>
+        <p>
+            What you can see below is an <a href="https://en.wikipedia.org/wiki/Ontology_(information_science)">ontology</a> engine
+            written in C++17 which is part of a bigger project: <a href="http://symatem.github.io">Symatem</a>,
+            compiled to a binary <a href="http://webassembly.org">WebAssembly</a>
+            <a href="https://github.com/Symatem/symatem.github.io/blob/master/public/js/Symatem.wasm">file (88 KB)</a>
+            using <a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang 4.0</a> and loaded into the browser.
+            There some <a href="http://es6-features.org">ES6</a> code,
+            which handles <a href="https://github.com/Symatem/symatem-ide/blob/master/lib/OntologyEditor.js">the user interaction</a>
+            and <a href="https://github.com/arlac77/WiredPanels">the rendering</a>, is connected to it via these two files:
+            <a href="https://github.com/Symatem/CppCodeBase/blob/master/Targets/WASM.cpp">C++ side</a>,
+            <a href="https://github.com/Symatem/SymatemWasm/blob/master/SymatemWasm.js">JS side</a>.
+        </p>
+        <pre><code class="language-symatemHRL" id="code">
+    (IsA Example; Quality Nice; Needs ToBeFound;)
+    (Car; Has (IsA Group; Elements Wheel; Count 4;);)
+        </code></pre>
+        <div id="OntologyEditor">
+            <script type="text/javascript" src="../public/js/OntologyEditor.js"></script>
+        </div>
+        <br />
+        <br />
+        <h3>Usage</h3>
+        <ul>
+            <li>Explore:<ul>
+                <li>Drag and drop a symbol (box) around to reposition it</li>
+                <li>Click on a green or blue socket (circle) to explore the directly connected symbol</li>
+                <li>Click on a socket a second time to explore all symbols indirectly connected to it</li>
+                <li>Click on a red socket to hide its symbol</li>
+            </ul><br /></li>
+            <li>Edit:<ul>
+                <li>Click on a symbol to edit it</li>
+                <li>Shift-click on symbols, sockets or wires to select them</li>
+                <li>Press backspace to delete the selected objects</li>
+                <li>Double-click on the background of the visualizer to add a new symbol</li>
+                <li>TODO: Drag a wire from a socket to add a new triple</li>
+                <li>TODO: Undo & Redo</li>
+                <li>TODO: Copy & Paste</li>
+            </ul><br /></li>
+            <li>Persistate:<ul>
+                <li><input id="saveImage" value="Download" type="button" /> the memory image of the ontology as a binary file</li>
+                <li>TODO: Drop such a binary file in the visualizer to load it</li>
+            </ul></li>
+        </ul>
+    </body>
+</html>
