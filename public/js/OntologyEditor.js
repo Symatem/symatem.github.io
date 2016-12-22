@@ -6,43 +6,33 @@ const WiredPanels = require('WiredPanels'),
       Symatem = require('SymatemWasm');
 
 module.exports = function(element) {
-    if(typeof WebAssembly !== 'object') {
-        const message = document.createElement('div');
-        element.appendChild(message);
-        message.innerHTML = 'WebAssembly is a young technology and seems to be unsupported or disabled.<br /><br />';
-        const link = document.createElement('a');
-        message.appendChild(link);
-        link.href = 'http://webassembly.org/demo/';
-        link.innerText = 'Learn More';
-        return;
-    }
-
-    this.wiredPanels = new WiredPanels(element);
-    this.panelIndex = new Map;
-    this.labelIndex = new Map;
-
-    this.fetchResource('../public/js/Symatem.wasm', 'arraybuffer').then(function(event) {
-        new Symatem(new Uint8Array(event.target.response)).then(function(symatemInstance) {
-            this.symatem = symatemInstance;
-            const result = this.symatem.deserializeBlob(document.getElementById('code').innerText);
-            this.showSymbols((result[0]) ? result : [result]);
-
-            document.getElementById('saveImage').onclick = function(event) {
-                this.saveImage();
-            }.bind(this);
-            element.addEventListener('dragover', function(event) {
-                event.stopPropagation();
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'copy';
-            }.bind(this), false);
-            element.addEventListener('drop', this.loadImage.bind(this), false);
-            element.ondblclick = function() {
-                const symbol = this.symatem.call('createSymbol');
-                if(this.editBlobOfSymbol(symbol, '#'+symbol))
-                    this.showSymbols([symbol]);
-                else
-                    this.symatem.call('releaseSymbol', symbol);
-            }.bind(this);
+    return new Promise(function(fullfill, reject) {
+        if(typeof WebAssembly !== 'object') {
+            const message = document.createElement('div');
+            element.appendChild(message);
+            message.innerHTML = 'WebAssembly is a young technology and seems to be unsupported or disabled.<br /><br />';
+            const link = document.createElement('a');
+            message.appendChild(link);
+            link.href = 'http://webassembly.org/demo/';
+            link.innerText = 'Learn More';
+            reject();
+            return;
+        }
+        this.fetchResource('../public/js/Symatem.wasm', 'arraybuffer').then(function(arraybuffer) {
+            new Symatem(new Uint8Array(arraybuffer)).then(function(symatemInstance) {
+                this.symatem = symatemInstance;
+                this.wiredPanels = new WiredPanels(element);
+                this.panelIndex = new Map;
+                this.labelIndex = new Map;
+                element.ondblclick = function() {
+                    const symbol = this.symatem.call('createSymbol');
+                    if(this.editBlobOfSymbol(symbol, '#'+symbol))
+                        this.showSymbols([symbol]);
+                    else
+                        this.symatem.call('releaseSymbol', symbol);
+                }.bind(this);
+                fullfill(this);
+            }.bind(this));
         }.bind(this));
     }.bind(this));
 }
@@ -53,9 +43,14 @@ module.exports.prototype.fetchResource = function(URL, type) {
     xhr.responseType = type;
     xhr.send(null);
     return new Promise(function(fullfill, reject) {
-        xhr.onload = fullfill;
+        xhr.onload = function(event) {
+            fullfill(event.target.response);
+        };
         xhr.onerror = reject;
     });
+    /* return fetch(URL).then(function(response) {
+        return response.arrayBuffer();
+    }); */
 };
 
 module.exports.prototype.setBlob = function(symbol, blob) {
@@ -167,16 +162,16 @@ module.exports.prototype.panelActivationHandler = function(type, element, node) 
     if(type == 'panels')
         this.editBlobOfSymbol(node.symbol, node.label.textContent);
     else if(node.rect) {
-        this.hideSymbol(node.symbol);
-        this.wiredPanels.syncGraph();
+        const symbols = this.symatem.query(this.symatem.queryMask.VIM, 0, 0, node.symbol)
+                .concat(this.symatem.query(this.symatem.queryMask.VMI, 0, node.symbol, 0));
+        this.showSymbols(symbols);
     }
 };
 
 module.exports.prototype.socketActivationHandler = function(type, element, node) {
     if(this.panelIndex.has(node.symbol)) {
-        const symbols = this.symatem.query(this.symatem.queryMask.VIM, 0, 0, node.symbol)
-                .concat(this.symatem.query(this.symatem.queryMask.VMI, 0, node.symbol, 0));
-        this.showSymbols(symbols);
+        this.hideSymbol(node.symbol);
+        this.wiredPanels.syncGraph();
     } else
         this.showSymbols([node.symbol]);
 };
@@ -240,6 +235,14 @@ module.exports.prototype.hideSymbol = function(symbol) {
     this.wiredPanels.delete(panel);
 };
 
+module.exports.prototype.hideAllSymbols = function() {
+    for(const pair of this.panelIndex)
+        this.wiredPanels.delete(pair[1]);
+    this.wiredPanels.syncGraph();
+    this.panelIndex.clear();
+    this.labelIndex.clear();
+};
+
 module.exports.prototype.removeSegment = function(panel, index) {
     const leftSocket = panel.leftSide[index],
           rightSocket = panel.rightSide[index];
@@ -288,6 +291,8 @@ module.exports.prototype.loadImage = function(event) {
     const file = input.files[0], reader = new FileReader();
     reader.onload = function(event) {
         this.symatem.loadImage(new Uint8Array(reader.result));
+        this.hideAllSymbols();
+        this.showSymbols([1]); // TODO
     }.bind(this);
     reader.onerror = function(error) {
         console.log(error);
@@ -296,7 +301,38 @@ module.exports.prototype.loadImage = function(event) {
 };
 
 if(process.browser)
-    new module.exports(document.currentScript.parentNode);
+    new module.exports(document.currentScript.parentNode).then(function(ontologyEditor) {
+        const codeInput = document.getElementById('code');
+        const element = ontologyEditor.wiredPanels.svg.parentNode;
+        function loadFromText() {
+            const result = ontologyEditor.symatem.deserializeBlob(codeInput.innerText);
+            ontologyEditor.showSymbols((result[0]) ? result : [result]);
+        }
+        loadFromText();
+        const startEditingCode = function() {
+            codeInput.innerHTML = '<textarea style="width: 100%;" rows="32">'+codeInput.innerText+'</textarea>';
+            codeInput.parentNode.onclick = undefined;
+            codeInput.childNodes[0].onblur = stopEditingCode;
+        };
+        const stopEditingCode = function() {
+            codeInput.innerHTML = codeInput.childNodes[0].value;
+            codeInput.parentNode.onclick = startEditingCode;
+            ontologyEditor.symatem.resetImage();
+            ontologyEditor.hideAllSymbols();
+            loadFromText();
+            Prism.highlightElement(codeInput);
+        };
+        codeInput.parentNode.onclick = startEditingCode;
+        document.getElementById('saveImage').onclick = function(event) {
+            ontologyEditor.saveImage();
+        };
+        element.addEventListener('dragover', function(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+        }, false);
+        element.addEventListener('drop', ontologyEditor.loadImage.bind(ontologyEditor), false);
+    });
 
 }).call(this,require('_process'))
 },{"SymatemWasm":2,"WiredPanels":3,"_process":22}],2:[function(require,module,exports){
@@ -311,7 +347,8 @@ module.exports = function(code) {
         this.wasmModule = result;
         this.wasmInstance = new WebAssembly.Instance(this.wasmModule, { 'env': this.env });
         this.superPageByteAddress = this.wasmInstance.exports.memory.buffer.byteLength;
-        this.call(this.initializerFunction+'WASM.cpp');
+        this.wasmInstance.exports.memory.grow(1);
+        this.resetImage();
         return this;
     }.bind(this), function(error) {
         console.log(error);
@@ -357,8 +394,13 @@ module.exports.prototype.loadImage = function(image) {
     const currentSize = this.wasmInstance.exports.memory.buffer.byteLength,
           newSize = this.superPageByteAddress+image.byteLength;
     if(currentSize < newSize)
-        this.wasmInstance.exports.memory.grow(math.ceil((newSize-currentSize)/this.chunkSize));
+        this.wasmInstance.exports.memory.grow(Math.ceil((newSize-currentSize)/this.chunkSize));
     this.setMemorySlice(this.superPageByteAddress, image);
+};
+
+module.exports.prototype.resetImage = function() {
+    this.setMemorySlice(this.superPageByteAddress, new Uint8Array(this.chunkSize));
+    this.call(this.initializerFunction+'WASM.cpp');
 };
 
 module.exports.prototype.call = function(name, ...params) {
@@ -567,10 +609,7 @@ module.exports = function (parentElement) {
     return this.svg.parentNode.onmouseup(event.touches[0]);
   }.bind(this);
 
-  this.panelsGroup = this.createElement('g', this.svg);
-  this.wiresGroup = this.createElement('g', this.svg);
   const svgDefs = this.createElement('defs', this.svg);
-
   const blurFilter = this.createElement('filter', svgDefs);
   blurFilter.setAttribute('id', 'blurFilter');
   blurFilter.setAttribute('x', -10);
@@ -591,6 +630,8 @@ module.exports = function (parentElement) {
   this.createElement('feMergeNode', feMerge).setAttribute('in', 'brighter');
   this.createElement('feMergeNode', feMerge).setAttribute('in', 'SourceGraphic');
 
+  this.panelsGroup = this.createElement('g', this.svg);
+  this.wiresGroup = this.createElement('g', this.svg);
   this.layoutEngine = new colaLayout()
     .linkDistance(this.config.panelDistance)
     .avoidOverlaps(true);
@@ -730,8 +771,7 @@ module.exports.prototype.deleteElements = function (trash) {
 };
 
 module.exports.prototype.handleKeyboard = function (event) {
-  const rect = this.svg.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0 || event.ctrlKey)
+  if (this.svg.parentNode.querySelector(':hover') == null || event.ctrlKey)
     return;
   event.stopPropagation();
   event.preventDefault();
@@ -942,6 +982,7 @@ module.exports.prototype.syncPanel = function (panel) {
       const posY = (i + 1) * this.config.panelPadding * 2;
       panel.lines[i] = this.createElement('path', panel.lines.group);
       panel.lines[i].setAttribute('d', 'M0,' + posY + 'h' + width);
+      panel.lines[i].classList.add('noHover');
     }
   }
 
@@ -5413,14 +5454,103 @@ exports.removeOverlapInOneDimension = removeOverlapInOneDimension;
 
 },{}],22:[function(require,module,exports){
 // shim for using process in browser
-
 var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
 var queue = [];
 var draining = false;
 var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -5436,7 +5566,7 @@ function drainQueue() {
     if (draining) {
         return;
     }
-    var timeout = setTimeout(cleanUpNextTick);
+    var timeout = runTimeout(cleanUpNextTick);
     draining = true;
 
     var len = queue.length;
@@ -5453,7 +5583,7 @@ function drainQueue() {
     }
     currentQueue = null;
     draining = false;
-    clearTimeout(timeout);
+    runClearTimeout(timeout);
 }
 
 process.nextTick = function (fun) {
@@ -5465,7 +5595,7 @@ process.nextTick = function (fun) {
     }
     queue.push(new Item(fun, args));
     if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
+        runTimeout(drainQueue);
     }
 };
 

@@ -12,11 +12,12 @@
         </style>
     </head>
     <body>
+        Show HN: Symatem meets WebAssembly - an online ontology engine, visualizer and editor
+
         <h1>Symatem Ontology Editor</h1>
         <p>
             What you can see below is an <a href="https://en.wikipedia.org/wiki/Ontology_(information_science)">ontology</a> engine
-            written in C++17 which is part of a bigger project: <a href="http://symatem.github.io">Symatem</a>,
-            compiled to a binary <a href="http://webassembly.org">WebAssembly</a>
+            written in C++17, compiled to a binary <a href="http://webassembly.org">WebAssembly</a>
             <a href="https://github.com/Symatem/symatem.github.io/blob/master/public/js/Symatem.wasm">file (88 KB)</a>
             using <a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang 4.0</a> and loaded into the browser.
             There some <a href="http://es6-features.org">ES6</a> code,
@@ -24,11 +25,13 @@
             and <a href="https://github.com/arlac77/WiredPanels">the rendering</a>, is connected to it via these two files:
             <a href="https://github.com/Symatem/CppCodeBase/blob/master/Targets/WASM.cpp">C++ side</a>,
             <a href="https://github.com/Symatem/SymatemWasm/blob/master/SymatemWasm.js">JS side</a>.
+            The upper view contains a text representation of the ontology and
+            the view below aggregates all triples sharing the same entity in boxes.
+            In each box the common entity is displayed on top with a set of attribute (left) and value (right) pairs below.
+            The blobs of these symbols are inlined graphically, so they don't have to be explored explicitly.
         </p>
-        <pre><code class="language-symatemHRL" id="code">
-    (IsA Example; Quality Nice; Needs ToBeFound;)
-    (Car; Has (IsA Group; Elements Wheel; Count 4;);)
-        </code></pre>
+        <pre><code class="language-symatemHRL" id="code">(IsA Example; Quality Nice; Needs ToBeFound;)
+(Car; Has (IsA Group; Elements Wheel; Count 4;);)</code></pre>
         <div id="OntologyEditor">
             <script type="text/javascript" src="../public/js/OntologyEditor.js"></script>
         </div>
@@ -38,9 +41,8 @@
         <ul>
             <li>Explore:<ul>
                 <li>Drag and drop a symbol (box) around to reposition it</li>
-                <li>Click on a green or blue socket (circle) to explore the directly connected symbol</li>
-                <li>Click on a socket a second time to explore all symbols indirectly connected to it</li>
-                <li>Click on a red socket to hide its symbol</li>
+                <li>Click on a green or blue socket (circle) to toggle the visibility of the connected symbol</li>
+                <li>Click on a red socket to see all symbols indirectly connected to it</li>
             </ul><br /></li>
             <li>Edit:<ul>
                 <li>Click on a symbol to edit it</li>
@@ -48,12 +50,11 @@
                 <li>Press backspace to delete the selected objects</li>
                 <li>Double-click on the background of the visualizer to add a new symbol</li>
                 <li>TODO: Drag a wire from a socket to add a new triple</li>
-                <li>TODO: Undo & Redo</li>
-                <li>TODO: Copy & Paste</li>
+                <li>Click on the source code above to edit it, blur again to apply the changes</li>
             </ul><br /></li>
             <li>Persistate:<ul>
                 <li><input id="saveImage" value="Download" type="button" /> the memory image of the ontology as a binary file</li>
-                <li>TODO: Drop such a binary file in the visualizer to load it</li>
+                <li>Drop such a binary file in the visualizer to load it (but the state of exploration is lost)</li>
             </ul></li>
         </ul>
     </body>
