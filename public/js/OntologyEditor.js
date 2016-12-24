@@ -25,11 +25,14 @@ module.exports = function(element) {
                 this.panelIndex = new Map;
                 this.labelIndex = new Map;
                 element.ondblclick = function() {
-                    const symbol = this.symatem.call('createSymbol');
-                    if(this.editBlobOfSymbol(symbol, '#'+symbol))
-                        this.showSymbols([symbol]);
+                    const input = prompt('Blob:');
+                    if(input == null || (input[0] != '"' && input.indexOf(';') > -1))
+                        return;
+                    const result = this.symatem.deserializeBlob(input);
+                    if(result.length == 0)
+                        this.showSymbols([this.symatem.call('createSymbol')]);
                     else
-                        this.symatem.call('releaseSymbol', symbol);
+                        this.showSymbols((result[0]) ? result : [result]);
                 }.bind(this);
                 fullfill(this);
             }.bind(this));
@@ -69,22 +72,6 @@ module.exports.prototype.setBlob = function(symbol, blob) {
     }
     for(const segement of this.labelIndex.get(symbol))
         this.syncLabel(segement);
-};
-
-module.exports.prototype.editBlobOfSymbol = function(symbol, blob) {
-    const string = prompt('Blob:', blob);
-    if(string == null)
-        return false;
-    if(string.length > 2 && string[0] == '"' && string[string.length-1] == '"')
-        blob = string.substr(1, string.length-2);
-    else if(!Number.isNaN(parseFloat(string)))
-        blob = parseFloat(string);
-    else if(!Number.isNaN(parseInt(string)))
-        blob = parseInt(string);
-    else
-        blob = undefined;
-    this.setBlob(symbol, blob);
-    return true;
 };
 
 module.exports.prototype.getTripleOfWire = function(wire) {
@@ -159,9 +146,21 @@ module.exports.prototype.unindexLabel = function(segement) {
 };
 
 module.exports.prototype.panelActivationHandler = function(type, element, node) {
-    if(type == 'panels')
-        this.editBlobOfSymbol(node.symbol, node.label.textContent);
-    else if(node.rect) {
+    if(type == 'panels') {
+        let blob = node.label.textContent;
+        const string = prompt('Blob:', blob);
+        if(string == null)
+            return;
+        if(string.length > 2 && string[0] == '"' && string[string.length-1] == '"')
+            blob = string.substr(1, string.length-2);
+        else if(!Number.isNaN(parseFloat(string)))
+            blob = parseFloat(string);
+        else if(!Number.isNaN(parseInt(string)))
+            blob = parseInt(string);
+        else
+            blob = undefined;
+        this.setBlob(node.symbol, blob);
+    } else if(node.rect) {
         const symbols = this.symatem.query(this.symatem.queryMask.VIM, 0, 0, node.symbol)
                 .concat(this.symatem.query(this.symatem.queryMask.VMI, 0, node.symbol, 0));
         this.showSymbols(symbols);
@@ -200,6 +199,8 @@ module.exports.prototype.panelWireConnectHandler = function(type, element, node,
 };
 
 module.exports.prototype.showSymbols = function(symbols) {
+    if(symbols.length > 16)
+        symbols = symbols.slice(0, 16);
     for(const symbol of symbols) {
         if(this.panelIndex.has(symbol))
             continue;
@@ -302,13 +303,23 @@ module.exports.prototype.loadImage = function(event) {
 
 if(process.browser)
     new module.exports(document.currentScript.parentNode).then(function(ontologyEditor) {
+        const codeExamples = document.getElementById('codeExamples');
         const codeInput = document.getElementById('code');
         const element = ontologyEditor.wiredPanels.svg.parentNode;
         function loadFromText() {
+            ontologyEditor.hideAllSymbols();
+            ontologyEditor.symatem.resetImage();
             const result = ontologyEditor.symatem.deserializeBlob(codeInput.innerText);
             ontologyEditor.showSymbols((result[0]) ? result : [result]);
+            Prism.highlightElement(codeInput);
         }
-        loadFromText();
+        codeExamples.onchange = function() {
+            ontologyEditor.fetchResource(codeExamples.value, 'text').then(function(result) {
+                codeInput.innerHTML = result;
+                loadFromText();
+            });
+        };
+        codeExamples.onchange();
         const startEditingCode = function() {
             codeInput.innerHTML = '<textarea style="width: 100%;" rows="32">'+codeInput.innerText+'</textarea>';
             codeInput.parentNode.onclick = undefined;
@@ -317,10 +328,7 @@ if(process.browser)
         const stopEditingCode = function() {
             codeInput.innerHTML = codeInput.childNodes[0].value;
             codeInput.parentNode.onclick = startEditingCode;
-            ontologyEditor.symatem.resetImage();
-            ontologyEditor.hideAllSymbols();
             loadFromText();
-            Prism.highlightElement(codeInput);
         };
         codeInput.parentNode.onclick = startEditingCode;
         document.getElementById('saveImage').onclick = function(event) {
@@ -345,10 +353,11 @@ function uint8ArrayToString(array) {
 module.exports = function(code) {
     return WebAssembly.compile(code).then(function(result) {
         this.wasmModule = result;
+        for(let key in this.env)
+            this.env[key] = this.env[key].bind(this);
         this.wasmInstance = new WebAssembly.Instance(this.wasmModule, { 'env': this.env });
         this.superPageByteAddress = this.wasmInstance.exports.memory.buffer.byteLength;
         this.wasmInstance.exports.memory.grow(1);
-        this.resetImage();
         return this;
     }.bind(this), function(error) {
         console.log(error);
@@ -407,7 +416,7 @@ module.exports.prototype.call = function(name, ...params) {
     try {
         return this.wasmInstance.exports[name](...params);
     } catch(error) {
-        console.log(name, error);
+        console.log(name, ...params, error);
     }
 };
 
@@ -429,7 +438,7 @@ module.exports.prototype.readBlob = function(symbol, offset, length) {
     while(length > 0) {
         const sliceLength = Math.min(length, this.blobBufferSize*8);
         this.call('readBlob', symbol, offset+sliceOffset*8, sliceLength);
-        const bufferSlice = this.getMemorySlice(bufferByteAddress+sliceOffset, Math.ceil(sliceLength/8));
+        const bufferSlice = this.getMemorySlice(bufferByteAddress, Math.ceil(sliceLength/8));
         data.set(bufferSlice, sliceOffset);
         length -= sliceLength;
         sliceOffset += Math.ceil(sliceLength/8);
@@ -449,7 +458,7 @@ module.exports.prototype.writeBlob = function(symbol, data, offset) {
     while(newLength > 0) {
         const sliceLength = Math.min(newLength, this.blobBufferSize*8),
               bufferSlice = new Uint8Array(data.slice(sliceOffset, sliceOffset+Math.ceil(sliceLength/8)));
-        this.setMemorySlice(bufferByteAddress+sliceOffset, bufferSlice);
+        this.setMemorySlice(bufferByteAddress, bufferSlice);
         this.call('writeBlob', symbol, offset+sliceOffset*8, sliceLength);
         newLength -= sliceLength;
         sliceOffset += Math.ceil(sliceLength/8);

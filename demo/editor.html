@@ -30,8 +30,10 @@
             In each box the common entity is displayed on top with a set of attribute (left) and value (right) pairs below.
             The blobs of these symbols are inlined graphically, so they don't have to be explored explicitly.
         </p>
-        <pre><code class="language-symatemHRL" id="code">(IsA Example; Quality Nice; Needs ToBeFound;)
-(Car; Has (IsA Group; Elements Wheel; Count 4;);)</code></pre>
+        <select id="codeExamples">
+            <option value="Network.sym">Network</option>
+        </select>
+        <pre><code class="language-symatemHRL" id="code"></code></pre>
         <div id="OntologyEditor">
             <script type="text/javascript" src="../public/js/OntologyEditor.js"></script>
         </div>
@@ -48,7 +50,7 @@
                 <li>Click on a symbol to edit it</li>
                 <li>Shift-click on symbols, sockets or wires to select them</li>
                 <li>Press backspace to delete the selected objects</li>
-                <li>Double-click on the background of the visualizer to add a new symbol</li>
+                <li>Double-click on the background of the visualizer to find existing symbols or to add new ones</li>
                 <li>TODO: Drag a wire from a socket to add a new triple</li>
                 <li>Click on the source code above to edit it, blur again to apply the changes</li>
             </ul><br /></li>

@@ -6,6 +6,6 @@ Prism.languages.symatemHRL = {
     'tag': /;/,
     'punctuation': /([()])/,
     'keyword': /(#[^\s();]*)/,
-    'number': [/(raw:[0-9A-F]+)/, /(-?\d*\.?\d+)/],
-    'attr-value': [/(".*")/, /\b([^\s();]+)\b/]
+    'string': [/(".*")/],
+    'attr-value': [/\b([^\s();]+)\b/]
 };

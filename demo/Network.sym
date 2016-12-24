@@ -1,0 +1,19 @@
+(
+    MyRouter;
+    Type FRITZ!Box;
+    NetworkInterface (
+        Type IEEE802.3;
+        MacAddress 4B:BC:EB:21:51:3A;
+        IPv4Address 10.0.0.1;
+    ) (
+        Type IEEE802.11;
+        MacAddress 6F:44:10:D3:5A:14;
+        IPv4Address 10.0.0.2;
+    );
+)
+
+(
+    FRITZ!Box;
+    Type Router;
+    Manufacturer AVM;
+)
