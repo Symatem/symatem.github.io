@@ -1,9 +1,256 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* jslint node: true, esnext: true */
+/* global WebAssembly */
+'use strict';
+
+function uint8ArrayToString(array) {
+    return String.fromCharCode.apply(null, array);
+}
+
+module.exports = function(code) {
+    return WebAssembly.compile(code).then(function(result) {
+        this.wasmModule = result;
+        for(let key in this.env)
+            this.env[key] = this.env[key].bind(this);
+        this.wasmInstance = new WebAssembly.Instance(this.wasmModule, { 'env': this.env });
+        this.superPageByteAddress = this.wasmInstance.exports.memory.buffer.byteLength;
+        this.wasmInstance.exports.memory.grow(1);
+        return this;
+    }.bind(this), function(error) {
+        console.log(error);
+    });
+};
+
+module.exports.prototype.initializerFunction = '_GLOBAL__sub_I_';
+module.exports.prototype.chunkSize = 65536;
+module.exports.prototype.blobBufferSize = 4096;
+module.exports.prototype.symbolByName = {
+    BlobType: 13,
+    Natural: 14,
+    Integer: 15,
+    Float: 16,
+    UTF8: 17
+};
+
+module.exports.prototype.env = {
+    'consoleLogString': function(basePtr, length) {
+        console.log(uint8ArrayToString(this.getMemorySlice(basePtr, length)));
+    },
+    'consoleLogInteger': function(value) {
+        console.log(value);
+    },
+    'consoleLogFloat': function(value) {
+        console.log(value);
+    }
+};
+
+module.exports.prototype.getMemorySlice = function(begin, length) {
+    return new Uint8Array(this.wasmInstance.exports.memory.buffer.slice(begin, begin+length));
+};
+
+module.exports.prototype.setMemorySlice = function(begin, slice) {
+    new Uint8Array(this.wasmInstance.exports.memory.buffer).set(slice, begin);
+};
+
+module.exports.prototype.saveImage = function() {
+    this.call('saveImage');
+    return this.wasmInstance.exports.memory.buffer.slice(this.superPageByteAddress);
+};
+
+module.exports.prototype.loadImage = function(image) {
+    const currentSize = this.wasmInstance.exports.memory.buffer.byteLength,
+          newSize = this.superPageByteAddress+image.byteLength;
+    if(currentSize < newSize)
+        this.wasmInstance.exports.memory.grow(Math.ceil((newSize-currentSize)/this.chunkSize));
+    this.setMemorySlice(this.superPageByteAddress, image);
+};
+
+module.exports.prototype.resetImage = function() {
+    this.setMemorySlice(this.superPageByteAddress, new Uint8Array(this.chunkSize));
+    this.call(this.initializerFunction+'WASM.cpp');
+};
+
+module.exports.prototype.call = function(name, ...params) {
+    try {
+        return this.wasmInstance.exports[name](...params);
+    } catch(error) {
+        console.log(name, ...params, error);
+    }
+};
+
+module.exports.prototype.readSymbolBlob = function(symbol) {
+    const buffer = this.readBlob(symbol).buffer;
+    return Array.prototype.slice.call(new Uint32Array(buffer));
+};
+
+module.exports.prototype.readBlob = function(symbol, offset, length) {
+    if(!offset)
+        offset = 0;
+    if(!length)
+        length = this.call('getBlobSize', symbol)-offset;
+    if(length < 0)
+        return;
+    let sliceOffset = 0;
+    const bufferByteAddress = this.call('getStackPointer')-this.blobBufferSize,
+          data = new Uint8Array(Math.ceil(length/8));
+    while(length > 0) {
+        const sliceLength = Math.min(length, this.blobBufferSize*8);
+        this.call('readBlob', symbol, offset+sliceOffset*8, sliceLength);
+        const bufferSlice = this.getMemorySlice(bufferByteAddress, Math.ceil(sliceLength/8));
+        data.set(bufferSlice, sliceOffset);
+        length -= sliceLength;
+        sliceOffset += Math.ceil(sliceLength/8);
+    }
+    return data;
+};
+
+module.exports.prototype.writeBlob = function(symbol, data, offset) {
+    const bufferByteAddress = this.call('getStackPointer')-this.blobBufferSize,
+          oldLength = this.call('getBlobSize', symbol);
+    let newLength = (data === undefined) ? 0 : data.length*8, sliceOffset = 0;
+    if(!offset) {
+        offset = 0;
+        this.call('setBlobSize', symbol, newLength);
+    } else if(newLength+offset > oldLength)
+        return false;
+    while(newLength > 0) {
+        const sliceLength = Math.min(newLength, this.blobBufferSize*8),
+              bufferSlice = new Uint8Array(data.slice(sliceOffset, sliceOffset+Math.ceil(sliceLength/8)));
+        this.setMemorySlice(bufferByteAddress, bufferSlice);
+        this.call('writeBlob', symbol, offset+sliceOffset*8, sliceLength);
+        newLength -= sliceLength;
+        sliceOffset += Math.ceil(sliceLength/8);
+    }
+    return true;
+};
+
+module.exports.prototype.getBlobType = function(symbol) {
+    const result = this.query(this.queryMask.MMV, symbol, this.symbolByName.BlobType, 0);
+    return (result.length === 1) ? result[0] : 0;
+};
+
+module.exports.prototype.getBlob = function(symbol) {
+    const type = this.getBlobType(symbol);
+    const blob = this.readBlob(symbol),
+          dataView = new DataView(blob.buffer);
+    if(blob.length === 0)
+        return;
+    switch(type) {
+        case this.symbolByName.Natural:
+            return dataView.getUint32(0, true);
+        case this.symbolByName.Integer:
+            return dataView.getInt32(0, true);
+        case this.symbolByName.Float:
+            return dataView.getFloat32(0, true);
+        case this.symbolByName.UTF8:
+            return uint8ArrayToString(blob);
+    }
+    return blob;
+};
+
+module.exports.prototype.setBlob = function(symbol, data) {
+    let type = 0, buffer = data;
+    switch(typeof data) {
+        case 'string':
+            buffer = new Uint8Array(data.length);
+            for(let i = 0; i < data.length; ++i)
+                buffer[i] = data[i].charCodeAt(0);
+            type = this.symbolByName.UTF8;
+            break;
+        case 'number':
+            buffer = new Uint8Array(4);
+            const view = new DataView(buffer.buffer);
+            if(!Number.isInteger(data)) {
+                view.setFloat32(0, data, true);
+                type = this.symbolByName.Float;
+            } else if(data < 0) {
+                view.setInt32(0, data, true);
+                type = this.symbolByName.Integer;
+            } else {
+                view.setUint32(0, data, true);
+                type = this.symbolByName.Natural;
+            }
+            break;
+    }
+    if(!this.writeBlob(symbol, buffer))
+        return false;
+    this.setSolitary(symbol, this.symbolByName.BlobType, type);
+    return true;
+};
+
+module.exports.prototype.setSolitary = function(entity, attribute, newValue) {
+    const result = this.query(this.queryMask.MMV, entity, attribute, 0);
+    for(const oldValue of result)
+        this.call('unlink', entity, attribute, oldValue);
+    this.call('link', entity, attribute, newValue);
+};
+
+module.exports.prototype.deserializeHRL = function(inputString, packageSymbol = 0) {
+    const inputSymbol = this.call('createSymbol'), outputSymbol = this.call('createSymbol');
+    this.setBlob(inputSymbol, inputString);
+    const exception = this.call('deserializeHRL', inputSymbol, outputSymbol, packageSymbol);
+    const result = this.readSymbolBlob(outputSymbol);
+    this.call('releaseSymbol', inputSymbol);
+    this.call('releaseSymbol', outputSymbol);
+    return (exception) ? exception : result;
+};
+
+module.exports.prototype.deserializeBlob = function(string) {
+    if(string.length > 2 && string[0] == '"' && string[string.length-1] == '"')
+        return string.substr(1, string.length-2);
+    else if(string.length > 4 && string.substr(0, 4) == 'hex:') {
+        let blob = new Uint8Array(Math.floor((string.length-4)/2));
+        for(let i = 0; i < blob.length; ++i)
+            blob[i] = parseInt(string[i*2+4], 16)|(parseInt(string[i*2+5], 16)<<4);
+        return blob;
+    } else if(!Number.isNaN(parseFloat(string)))
+        return parseFloat(string);
+    else if(!Number.isNaN(parseInt(string)))
+        return parseInt(string);
+};
+
+module.exports.prototype.serializeBlob = function(symbol) {
+    const blob = this.getBlob(symbol);
+    switch(typeof blob) {
+        case 'undefined':
+            return '#'+symbol;
+        case 'string':
+            return '"'+blob+'"';
+        case 'object':
+            let string = '';
+            for(let i = 0; i < blob.length; ++i) {
+                const byte = blob[i];
+                string += (byte&0xF).toString(16)+(byte>>4).toString(16);
+            }
+            return 'hex:'+string.toUpperCase();
+        default:
+            return ''+blob;
+    }
+};
+
+module.exports.prototype.queryMode = ['M', 'V', 'I'];
+module.exports.prototype.queryMask = {};
+for(let i = 0; i < 27; ++i)
+    module.exports.prototype.queryMask[module.exports.prototype.queryMode[i%3] + module.exports.prototype.queryMode[Math.floor(i/3)%3] + module.exports.prototype.queryMode[Math.floor(i/9)%3]] = i;
+
+module.exports.prototype.query = function(mask, entity, attribute, value, countOnly) {
+    const resultSymbol = (countOnly) ? 0 : this.call('createSymbol');
+    let result = this.call('query', mask, entity, attribute, value, resultSymbol);
+    if(!countOnly) {
+        result = this.readSymbolBlob(resultSymbol);
+        this.call('releaseSymbol', resultSymbol);
+    }
+    return result;
+};
+
+},{}],2:[function(require,module,exports){
 (function (process){
+/* jslint node: true, esnext: true */
+/* global document, window */
 'use strict';
 
 const WiredPanels = require('WiredPanels'),
-      Symatem = require('SymatemWasm');
+      Symatem = require('../../SymatemWasm');
 
 module.exports = function(element) {
     return new Promise(function(fullfill, reject) {
@@ -28,7 +275,7 @@ module.exports = function(element) {
                     const input = prompt('Blob:');
                     if(input == null || (input[0] != '"' && input.indexOf(';') > -1))
                         return;
-                    const result = this.symatem.deserializeBlob(input);
+                    const result = this.symatem.deserializeHRL(input);
                     if(result.length == 0)
                         this.showSymbols([this.symatem.call('createSymbol')]);
                     else
@@ -70,11 +317,12 @@ module.exports.prototype.setBlob = function(symbol, blob) {
         if(newType != 0)
             this.linkTriple(symbol, this.symatem.symbolByName.BlobType, newType, true);
     }
-    for(const segement of this.labelIndex.get(symbol))
-        this.syncLabel(segement);
+    const label = this.getLabel(symbol);
+    for(const segment of this.labelIndex.get(symbol))
+        this.indexLabel(segment, label);
 };
 
-module.exports.prototype.getTripleOfWire = function(wire) {
+/*module.exports.prototype.getTripleOfWire = function(wire) {
     let index = Math.abs(this.wiredPanels.getIndexOfSocket(wire.srcPanel, wire.srcSocket))-1,
         entity = wire.srcPanel.symbol, attribute, value;
     if(wire.srcSocket.type == 'attribute') {
@@ -85,7 +333,7 @@ module.exports.prototype.getTripleOfWire = function(wire) {
         value = wire.srcSocket.symbol;
     }
     return [entity, attribute, value];
-};
+};*/
 
 module.exports.prototype.linkTriple = function(entity, attribute, value, onlyVisual) {
     if(!onlyVisual)
@@ -93,8 +341,7 @@ module.exports.prototype.linkTriple = function(entity, attribute, value, onlyVis
     if(!this.panelIndex.has(entity))
         return;
     const panel = this.panelIndex.get(entity);
-    panel.leftSide.push({ type: 'attribute', symbol: attribute });
-    panel.rightSide.push({ type: 'value', symbol: value });
+    this.generateSegment(panel, attribute, value);
     this.wiredPanels.syncPanel(panel);
     this.wireSegment(panel, panel.leftSide.length-1);
     this.wiredPanels.tickGraph();
@@ -118,49 +365,46 @@ module.exports.prototype.unlinkTriple = function(entity, attribute, value, onlyV
         }
 };
 
-module.exports.prototype.syncLabel = function(segment) {
-    const blob = this.symatem.getBlob(segment.symbol);
-    if(typeof blob === 'undefined') {
-        segment.label.classList.add('disabled');
-        segment.label.textContent = '#'+segment.symbol;
-    } else {
-        segment.label.classList.remove('disabled');
-        segment.label.textContent = (typeof blob === 'string') ? '"'+blob+'"' : ''+blob;
-    }
+module.exports.prototype.getLabel = function(symbol, cap = 16) {
+    let label = this.symatem.serializeBlob(symbol);
+    if(cap > 0 && label.length > cap+1)
+        label = label.substr(0, cap)+'…';
+    return label;
 };
 
-module.exports.prototype.indexLabel = function(segement) {
-    let set = this.labelIndex.get(segement.symbol);
+module.exports.prototype.indexLabel = function(segment, label) {
+    let set = this.labelIndex.get(segment.symbol);
     if(!set) {
-        set = new Set;
-        this.labelIndex.set(segement.symbol, set);
+        set = new Set([segment]);
+        this.labelIndex.set(segment.symbol, set);
+        label = this.getLabel(segment.symbol);
+    } else if(!label) {
+        label = set.keys().next().value.label.textContent;
+        set.add(segment);
     }
-    set.add(segement);
-    this.syncLabel(segement);
+    segment.label.textContent = label;
+    if(label[0] == '#')
+        segment.label.classList.add('disabled');
+    else
+        segment.label.classList.remove('disabled');
 };
 
-module.exports.prototype.unindexLabel = function(segement) {
-    let set = this.labelIndex.get(segement.symbol);
-    if(set)
-        set.delete(segement);
+module.exports.prototype.unindexLabel = function(segment) {
+    let set = this.labelIndex.get(segment.symbol);
+    if(set) {
+        set.delete(segment);
+        if(set.size == 0)
+            this.labelIndex.delete(segment.symbol);
+    }
 };
 
 module.exports.prototype.panelActivationHandler = function(type, element, node) {
     if(type == 'panels') {
-        let blob = node.label.textContent;
-        const string = prompt('Blob:', blob);
+        const string = prompt('Blob:', this.getLabel(node.symbol, null));
         if(string == null)
             return;
-        if(string.length > 2 && string[0] == '"' && string[string.length-1] == '"')
-            blob = string.substr(1, string.length-2);
-        else if(!Number.isNaN(parseFloat(string)))
-            blob = parseFloat(string);
-        else if(!Number.isNaN(parseInt(string)))
-            blob = parseInt(string);
-        else
-            blob = undefined;
-        this.setBlob(node.symbol, blob);
-    } else if(node.rect) {
+        this.setBlob(node.symbol, this.symatem.deserializeBlob(string));
+    } else {
         const symbols = this.symatem.query(this.symatem.queryMask.VIM, 0, 0, node.symbol)
                 .concat(this.symatem.query(this.symatem.queryMask.VMI, 0, node.symbol, 0));
         this.showSymbols(symbols);
@@ -168,6 +412,8 @@ module.exports.prototype.panelActivationHandler = function(type, element, node) 
 };
 
 module.exports.prototype.socketActivationHandler = function(type, element, node) {
+    if(!node.symbol)
+        return;
     if(this.panelIndex.has(node.symbol)) {
         this.hideSymbol(node.symbol);
         this.wiredPanels.syncGraph();
@@ -190,26 +436,53 @@ module.exports.prototype.socketDeletionHandler = function(type, element, socket)
     const index = Math.abs(this.wiredPanels.getIndexOfSocket(socket.panel, socket))-1,
           leftSocket = socket.panel.leftSide[index],
           rightSocket = socket.panel.rightSide[index];
-    this.unlinkTriple(socket.panel.symbol, leftSocket.symbol, rightSocket.symbol);
+    if(leftSocket.symbol && rightSocket.symbol)
+        this.unlinkTriple(socket.panel.symbol, leftSocket.symbol, rightSocket.symbol);
+    else
+        this.removeSegment(socket.panel, index);
 };
 
-module.exports.prototype.panelWireConnectHandler = function(type, element, node, wire) {
-    // this.linkTriple(node.symbol, , );
-    // TODO
+module.exports.prototype.panelWireConnectHandler = function(type, element, dstPanel, wire) {
+    if(wire.srcSocket == dstPanel) {
+        const panel = this.panelIndex.get(dstPanel.symbol);
+        this.generateSegment(panel);
+        this.wiredPanels.syncPanel(panel);
+    } else if(!wire.srcSocket.symbol) {
+        const srcSocket = wire.srcSocket,
+              entity = srcSocket.panel.symbol,
+              srcPanel = this.panelIndex.get(entity),
+              index = this.wiredPanels.getIndexOfSocket(srcPanel, srcSocket),
+              coSocket = this.wiredPanels.getSocketAtIndex(srcPanel, -index);
+        if(coSocket.symbol != undefined) {
+            let attribute, value;
+            if(srcSocket.type == 'attribute') {
+                attribute = dstPanel.symbol;
+                value = coSocket.symbol;
+            } else {
+                attribute = coSocket.symbol;
+                value = dstPanel.symbol;
+            }
+            if(this.symatem.query(this.symatem.queryMask.MMM, entity, attribute, value, true))
+                return;
+            this.symatem.call('link', entity, attribute, value);
+        }
+        srcSocket.symbol = dstPanel.symbol;
+        srcSocket.onactivation = this.socketActivationHandler.bind(this);
+        this.indexLabel(srcSocket);
+        this.wiredPanels.createWireHelper(srcSocket.type, srcPanel, dstPanel, index, 0);
+    } else
+        return;
+    this.wiredPanels.tickGraph();
 };
 
 module.exports.prototype.showSymbols = function(symbols) {
-    if(symbols.length > 16)
-        symbols = symbols.slice(0, 16);
     for(const symbol of symbols) {
         if(this.panelIndex.has(symbol))
             continue;
         const panel = { type: 'entity', leftSide: [], rightSide: [], symbol: symbol },
               queryResult = this.symatem.query(this.symatem.queryMask.MVV, symbol, 0, 0);
-        for(let i = 0; i < queryResult.length; i += 2) {
-            panel.leftSide.push({ type: 'attribute', symbol: queryResult[i] });
-            panel.rightSide.push({ type: 'value', symbol: queryResult[i+1] });
-        }
+        for(let i = 0; i < queryResult.length; i += 2)
+            this.generateSegment(panel, queryResult[i], queryResult[i+1]);
         this.wiredPanels.initializePanel(panel);
         this.panelIndex.set(symbol, panel);
         this.indexLabel(panel);
@@ -244,6 +517,34 @@ module.exports.prototype.hideAllSymbols = function() {
     this.labelIndex.clear();
 };
 
+module.exports.prototype.generateSegment = function(panel, attribute, value) {
+    panel.leftSide.push({
+        type: 'attribute',
+        symbol: attribute,
+        onactivation: this.socketActivationHandler.bind(this),
+        ondeletion: this.socketDeletionHandler.bind(this)
+    });
+    panel.rightSide.push({
+        type: 'value',
+        symbol: value,
+        onactivation: this.socketActivationHandler.bind(this),
+        ondeletion: this.socketDeletionHandler.bind(this)
+    });
+};
+
+module.exports.prototype.wireSegment = function(panel, index) {
+    const leftSocket = panel.leftSide[index],
+          rightSocket = panel.rightSide[index];
+    if(leftSocket.symbol && !leftSocket.label.textContent)
+        this.indexLabel(leftSocket);
+    if(rightSocket.symbol && !rightSocket.label.textContent)
+        this.indexLabel(rightSocket);
+    if(leftSocket.wiresPerPanel.size == 0 && this.panelIndex.has(leftSocket.symbol))
+        this.wiredPanels.createWireHelper('attribute', panel, this.panelIndex.get(leftSocket.symbol), -index-1, 0);
+    if(rightSocket.wiresPerPanel.size == 0 && this.panelIndex.has(rightSocket.symbol))
+        this.wiredPanels.createWireHelper('value', panel, this.panelIndex.get(rightSocket.symbol), index+1, 0);
+};
+
 module.exports.prototype.removeSegment = function(panel, index) {
     const leftSocket = panel.leftSide[index],
           rightSocket = panel.rightSide[index];
@@ -252,21 +553,6 @@ module.exports.prototype.removeSegment = function(panel, index) {
     leftSocket.deathFlag = true;
     rightSocket.deathFlag = true;
     this.wiredPanels.syncPanel(panel);
-};
-
-module.exports.prototype.wireSegment = function(panel, index) {
-    const leftSocket = panel.leftSide[index],
-          rightSocket = panel.rightSide[index];
-    this.indexLabel(leftSocket);
-    this.indexLabel(rightSocket);
-    leftSocket.onactivation = this.socketActivationHandler.bind(this);
-    rightSocket.onactivation = this.socketActivationHandler.bind(this);
-    leftSocket.ondeletion = this.socketDeletionHandler.bind(this);
-    rightSocket.ondeletion = this.socketDeletionHandler.bind(this);
-    if(leftSocket.wiresPerPanel.size == 0 && this.panelIndex.has(leftSocket.symbol))
-        this.wiredPanels.createWireHelper('attribute', panel, this.panelIndex.get(leftSocket.symbol), -index-1, 0);
-    if(rightSocket.wiresPerPanel.size == 0 && this.panelIndex.has(rightSocket.symbol))
-        this.wiredPanels.createWireHelper('value', panel, this.panelIndex.get(rightSocket.symbol), index+1, 0);
 };
 
 module.exports.prototype.saveImage = function() {
@@ -309,7 +595,7 @@ if(process.browser)
         function loadFromText() {
             ontologyEditor.hideAllSymbols();
             ontologyEditor.symatem.resetImage();
-            const result = ontologyEditor.symatem.deserializeBlob(codeInput.innerText);
+            const result = ontologyEditor.symatem.deserializeHRL(codeInput.innerText);
             ontologyEditor.showSymbols((result[0]) ? result : [result]);
             Prism.highlightElement(codeInput);
         }
@@ -343,212 +629,9 @@ if(process.browser)
     });
 
 }).call(this,require('_process'))
-},{"SymatemWasm":2,"WiredPanels":3,"_process":22}],2:[function(require,module,exports){
-'use strict';
-
-function uint8ArrayToString(array) {
-    return String.fromCharCode.apply(null, array);
-}
-
-module.exports = function(code) {
-    return WebAssembly.compile(code).then(function(result) {
-        this.wasmModule = result;
-        for(let key in this.env)
-            this.env[key] = this.env[key].bind(this);
-        this.wasmInstance = new WebAssembly.Instance(this.wasmModule, { 'env': this.env });
-        this.superPageByteAddress = this.wasmInstance.exports.memory.buffer.byteLength;
-        this.wasmInstance.exports.memory.grow(1);
-        return this;
-    }.bind(this), function(error) {
-        console.log(error);
-    });
-};
-
-module.exports.prototype.initializerFunction = '_GLOBAL__sub_I_';
-module.exports.prototype.chunkSize = 65536;
-module.exports.prototype.blobBufferSize = 4096;
-module.exports.prototype.symbolByName = {
-    BlobType: 13,
-    Natural: 14,
-    Integer: 15,
-    Float: 16,
-    UTF8: 17
-};
-
-module.exports.prototype.env = {
-    'consoleLogString': function(basePtr, length) {
-        console.log(uint8ArrayToString(this.getMemorySlice(basePtr, length)));
-    },
-    'consoleLogInteger': function(basePtr) {
-        console.log(new DataView(this.wasmInstance.exports.memory.buffer).getInt32(basePtr, true));
-    },
-    'consoleLogFloat': function(basePtr) {
-        console.log(new DataView(this.wasmInstance.exports.memory.buffer).getFloat64(basePtr, true));
-    }
-};
-
-module.exports.prototype.getMemorySlice = function(begin, length) {
-    return new Uint8Array(this.wasmInstance.exports.memory.buffer.slice(begin, begin+length));
-};
-
-module.exports.prototype.setMemorySlice = function(begin, slice) {
-    new Uint8Array(this.wasmInstance.exports.memory.buffer).set(slice, begin);
-};
-
-module.exports.prototype.saveImage = function() {
-    return this.wasmInstance.exports.memory.buffer.slice(this.superPageByteAddress);
-};
-
-module.exports.prototype.loadImage = function(image) {
-    const currentSize = this.wasmInstance.exports.memory.buffer.byteLength,
-          newSize = this.superPageByteAddress+image.byteLength;
-    if(currentSize < newSize)
-        this.wasmInstance.exports.memory.grow(Math.ceil((newSize-currentSize)/this.chunkSize));
-    this.setMemorySlice(this.superPageByteAddress, image);
-};
-
-module.exports.prototype.resetImage = function() {
-    this.setMemorySlice(this.superPageByteAddress, new Uint8Array(this.chunkSize));
-    this.call(this.initializerFunction+'WASM.cpp');
-};
-
-module.exports.prototype.call = function(name, ...params) {
-    try {
-        return this.wasmInstance.exports[name](...params);
-    } catch(error) {
-        console.log(name, ...params, error);
-    }
-};
-
-module.exports.prototype.readSymbolBlob = function(symbol) {
-    const buffer = this.readBlob(symbol).buffer;
-    return Array.prototype.slice.call(new Uint32Array(buffer));
-}
-
-module.exports.prototype.readBlob = function(symbol, offset, length) {
-    if(!offset)
-        offset = 0;
-    if(!length)
-        length = this.call('getBlobSize', symbol)-offset;
-    if(length < 0)
-        return;
-    let sliceOffset = 0;
-    const bufferByteAddress = this.call('getStackPointer')-this.blobBufferSize,
-          data = new Uint8Array(Math.ceil(length/8));
-    while(length > 0) {
-        const sliceLength = Math.min(length, this.blobBufferSize*8);
-        this.call('readBlob', symbol, offset+sliceOffset*8, sliceLength);
-        const bufferSlice = this.getMemorySlice(bufferByteAddress, Math.ceil(sliceLength/8));
-        data.set(bufferSlice, sliceOffset);
-        length -= sliceLength;
-        sliceOffset += Math.ceil(sliceLength/8);
-    }
-    return data;
-};
-
-module.exports.prototype.writeBlob = function(symbol, data, offset) {
-    const bufferByteAddress = this.call('getStackPointer')-this.blobBufferSize,
-          oldLength = this.call('getBlobSize', symbol);
-    let newLength = (data == undefined) ? 0 : data.length*8, sliceOffset = 0;
-    if(!offset) {
-        offset = 0;
-        this.call('setBlobSize', symbol, newLength);
-    } else if(newLength+offset > oldLength)
-        return false;
-    while(newLength > 0) {
-        const sliceLength = Math.min(newLength, this.blobBufferSize*8),
-              bufferSlice = new Uint8Array(data.slice(sliceOffset, sliceOffset+Math.ceil(sliceLength/8)));
-        this.setMemorySlice(bufferByteAddress, bufferSlice);
-        this.call('writeBlob', symbol, offset+sliceOffset*8, sliceLength);
-        newLength -= sliceLength;
-        sliceOffset += Math.ceil(sliceLength/8);
-    }
-    return true;
-};
-
-module.exports.prototype.getBlobType = function(symbol) {
-    const result = this.query(this.queryMask.MMV, symbol, this.symbolByName.BlobType, 0);
-    return (result.length == 1) ? result[0] : 0;
-};
-
-module.exports.prototype.getBlob = function(symbol) {
-    const type = this.getBlobType(symbol);
-    if(type == 0)
-        return;
-    const blob = this.readBlob(symbol),
-          dataView = new DataView(blob.buffer);
-    switch(type) {
-        case this.symbolByName.Natural:
-            return dataView.getUint32(0, true);
-        case this.symbolByName.Integer:
-            return dataView.getInt32(0, true);
-        case this.symbolByName.Float:
-            return dataView.getFloat32(0, true);
-        case this.symbolByName.UTF8:
-            return uint8ArrayToString(blob);
-    }
-};
-
-module.exports.prototype.setBlob = function(symbol, data) {
-    let type = 0, buffer = undefined;
-    switch(typeof data) {
-        case 'string':
-            buffer = [];
-            for(let i = 0; i < data.length; ++i)
-                buffer.push(data[i].charCodeAt(0));
-            buffer = new Uint8Array(buffer);
-            type = this.symbolByName.UTF8;
-            break;
-        case 'number':
-            buffer = new Uint8Array(4);
-            const view = new DataView(buffer.buffer);
-            if(!Number.isInteger(data)) {
-                view.setFloat32(0, data, true);
-                type = this.symbolByName.Float;
-            } else if(data < 0) {
-                view.setInt32(0, data, true);
-                type = this.symbolByName.Integer;
-            } else {
-                view.setUint32(0, data, true);
-                type = this.symbolByName.Natural;
-            }
-            break;
-    }
-    if(!this.writeBlob(symbol, buffer))
-        return false;
-    this.call('setSolitary', symbol, this.symbolByName.BlobType, type);
-    return true;
-};
-
-module.exports.prototype.deserializeBlob = function(inputString, packageSymbol = 0) {
-    const inputSymbol = this.call('createSymbol'), outputSymbol = this.call('createSymbol');
-    this.setBlob(inputSymbol, inputString);
-    const exception = this.call('deserializeBlob', inputSymbol, outputSymbol, packageSymbol);
-    const result = this.readSymbolBlob(outputSymbol);
-    this.call('releaseSymbol', inputSymbol);
-    this.call('releaseSymbol', outputSymbol);
-    return (exception) ? exception : result;
-};
-
-module.exports.prototype.queryMode = ['M', 'V', 'I'];
-module.exports.prototype.queryMask = {};
-for(let i = 0; i < 27; ++i)
-    module.exports.prototype.queryMask[module.exports.prototype.queryMode[i%3] + module.exports.prototype.queryMode[Math.floor(i/3)%3] + module.exports.prototype.queryMode[Math.floor(i/9)%3]] = i;
-
-module.exports.prototype.query = function(mask, entity, attribute, value, countOnly) {
-    const resultSymbol = (countOnly) ? 0 : this.call('createSymbol');
-    let result = this.call('query', mask, entity, attribute, value, resultSymbol);
-    if(!countOnly) {
-        result = this.readSymbolBlob(resultSymbol);
-        this.call('releaseSymbol', resultSymbol);
-    }
-    return result;
-};
-
-},{}],3:[function(require,module,exports){
+},{"../../SymatemWasm":1,"WiredPanels":3,"_process":22}],3:[function(require,module,exports){
 /* jslint node: true, esnext: true */
 /* global document, window */
-
 'use strict';
 
 const colaLayout = require('webcola').Layout;
@@ -660,6 +743,7 @@ module.exports.prototype.transformPanelMousePos = function (event, dstPrefix, ds
 };
 
 module.exports.prototype.config = {
+  panelWidth: 300,
   panelDistance: 150,
   panelMargin: 24,
   panelPadding: 12,
@@ -912,7 +996,6 @@ module.exports.prototype.syncPanelSide = function (panel, width, side, isLeft) {
       this.setHandlers('sockets', socket.circle, socket);
       socket.label = this.createElement('text', side.group);
       socket.label.setAttribute('text-anchor', (isLeft) ? 'start' : 'end');
-      socket.label.textContent = 'undefined';
       socket.wiresPerPanel = new Map();
       socket.panel = panel;
     }
@@ -969,15 +1052,14 @@ module.exports.prototype.syncPanel = function (panel) {
     }
   }
 
-  const width = 200;
-  this.syncPanelSide(panel, width, panel.leftSide, true);
-  this.syncPanelSide(panel, width, panel.rightSide, false);
+  this.syncPanelSide(panel, this.config.panelWidth, panel.leftSide, true);
+  this.syncPanelSide(panel, this.config.panelWidth, panel.rightSide, false);
 
   const socketCount = Math.max(panel.leftSide.length, panel.rightSide.length);
   const height = (socketCount + 1) * this.config.panelPadding * 2;
-  panel.rect.setAttribute('width', width);
+  panel.rect.setAttribute('width', this.config.panelWidth);
   panel.rect.setAttribute('height', height);
-  const halfWidth = Math.round(width / 2);
+  const halfWidth = Math.round(this.config.panelWidth / 2);
   if (panel.circle)
     panel.circle.setAttribute('cx', halfWidth);
   panel.label.setAttribute('x', halfWidth);
@@ -990,12 +1072,12 @@ module.exports.prototype.syncPanel = function (panel) {
     for (let i = panel.lines.group.childNodes.length; i < socketCount; ++i) {
       const posY = (i + 1) * this.config.panelPadding * 2;
       panel.lines[i] = this.createElement('path', panel.lines.group);
-      panel.lines[i].setAttribute('d', 'M0,' + posY + 'h' + width);
+      panel.lines[i].setAttribute('d', 'M0,' + posY + 'h' + this.config.panelWidth);
       panel.lines[i].classList.add('noHover');
     }
   }
 
-  panel.width = width + this.config.panelMargin;
+  panel.width = this.config.panelWidth + this.config.panelMargin;
   panel.height = height + this.config.panelMargin;
   return panel;
 };
@@ -5643,4 +5725,4 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}]},{},[1]);
+},{}]},{},[2]);

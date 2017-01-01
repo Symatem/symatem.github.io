@@ -1,7 +1,56 @@
 (
+    FRITZ!Box;
+    Type Router;
+    Manufacturer AVM;
+)
+
+(
+    Pine64+;
+    Type Computer;
+    Manufacturer PINE64;
+    Core (
+        Type A53;
+        Count 4;
+    );
+    Memory (
+        Type DRAM;
+        Count 2;
+        Unit Gibibyte;
+    );
+    Interface (
+        Type IEEE802.3;
+        Speed 1;
+        Unit GibibytePerSecond;
+    );
+)
+
+(
+    Parallella;
+    Type Computer;
+    Manufacturer Adapteva;
+    Core (
+        Type Epiphany;
+        Count 16;
+    ) (
+        Type A9;
+        Count 2;
+    );
+    Memory (
+        Type DRAM;
+        Count 1;
+        Unit Gibibyte;
+    );
+    Interface (
+        Type IEEE802.3;
+        Speed 1;
+        Unit GibibytePerSecond;
+    );
+)
+
+(
     MyRouter;
     Type FRITZ!Box;
-    NetworkInterface (
+    Interface (
         Type IEEE802.3;
         MacAddress 4B:BC:EB:21:51:3A;
         IPv4Address 10.0.0.1;
@@ -10,10 +59,4 @@
         MacAddress 6F:44:10:D3:5A:14;
         IPv4Address 10.0.0.2;
     );
-)
-
-(
-    FRITZ!Box;
-    Type Router;
-    Manufacturer AVM;
 )
