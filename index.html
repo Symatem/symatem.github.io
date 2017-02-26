@@ -1,5 +1,103 @@
----
-layout: default
----
-
-Empty content
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Show HN: Symatem meets WebAssembly - an online ontology engine, visualizer and editor</title>
+        <meta name="description" content="Reinventing Software from Scratch">
+        <meta name="author" content="Alexander Meißner">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/normalize.css">
+        <link rel="stylesheet" href="css/skeleton.css">
+        <link rel="stylesheet" href="css/OntologyEditor.css">
+        <link rel="icon" type="image/png" href="images/favicon.png">
+        <meta name="theme-color" content="#FFFFFF">
+    </head>
+    <body>
+        <div class="container">
+            <div class="row" style="margin-top: 10%;">
+                <div class="twelve column">
+                    <h1>Symatem Ontology Editor</h1>
+                    <p>
+                        What you can see below is a visualizer and editor with an <a href="https://en.wikipedia.org/wiki/Ontology_(information_science)">ontology</a> engine as backend
+                        which is written in C++17, compiled to a <a href="http://webassembly.org">WebAssembly</a>
+                        <a href="https://github.com/Symatem/symatem.github.io/blob/master/public/js/Symatem.wasm">binary file</a>
+                        using <a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang 4.0</a> and then loaded into the browser.
+                        There some <a href="http://es6-features.org">ES6</a> code,
+                        which handles <a href="https://github.com/Symatem/symatem-ide/blob/master/lib/OntologyEditor.js">the user interaction</a>
+                        and <a href="https://github.com/arlac77/WiredPanels">the rendering</a>, is connected to it via these two files:
+                        <a href="https://github.com/Symatem/CppCodeBase/blob/master/Targets/WASM.cpp">C++ side</a>,
+                        <a href="https://github.com/Symatem/SymatemWasm/blob/master/SymatemWasm.js">JS side</a>.
+                    <p>
+                    </p>
+                        If you have never heard of triple-based ontologies, you could think of them as mindmaps or graphs with labeled edges.
+                        Each edge is called a triple and connects three symbols: An entity with a value via an attribute.
+                        Natural languages use the same concept but call it a sentence with subject, predicate and object instead of a triple with entity, attribute and value.
+                        The visualizer below aggregates all triples which share the same entity in boxes in order to display the common entity only once in the top row.
+                        Below follows the list of the aggregated triples with the attributes on the left and values on the right.
+                        Furthermore each symbol has a virtual address space which allows them to have a bitstream containing literals like strings and numbers or even entire files.
+                        We call them blobs and they are inlined graphically, so they don't have to be explored explicitly.
+                    </p>
+                    <a class="github-button" href="https://github.com/Symatem/Symatem" data-icon="octicon-star" data-style="mega" data-count-href="/Symatem/Symatem/stargazers" data-count-api="/repos/Symatem/Symatem#stargazers_count" data-count-aria-label="# stargazers on GitHub" aria-label="Star Symatem/Symatem on GitHub">Star</a>
+                </div>
+            </div>
+            <pre><code id="code" style="display: none;">Network.sym</code></pre>
+            <div class="row">
+                <div class="twelve column" id="OntologyEditor">
+                    <script async defer src="js/OntologyEditor.js"></script>
+                </div>
+            </div>
+            <div class="row" style="margin-top: 3rem;">
+                <div class="one-third column">
+                    <h3>Explore</h3>
+                    <ul>
+                        <li>Drag and drop a symbol (box) around to reposition it</li>
+                        <li>Click on a green or blue socket (circle) to toggle the visibility of the connected symbol</li>
+                        <li>Click on a red socket to see all symbols indirectly connected to it</li>
+                        <li>Shift-click on symbols, sockets or wires to select them. They can also be moved together</li>
+                    </ul>
+                </div>
+                <div class="one-third column">
+                    <h3>Edit</h3>
+                    <ul>
+                        <li>Click on a symbol to edit it</li>
+                        <li>Drag a wire form a socket and drop it on a symbol to add socket slots</li>
+                        <li>Drag a wire to or from an empty socket to copy the configuration of another socket</li>
+                        <li>Press backspace to delete selected items</li>
+                        <li>Double-click on the background of the editor to find existing symbols or to add new ones</li>
+                    </ul>
+                </div>
+                <div class="one-third column">
+                    <h3>Store / Load</h3>
+                    <input id="saveImage" value="Download" type="button" /><br/>
+                    the ontology as a binary file.
+                    Drop such a binary file in the editor to load it.
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve column">
+                    <hr/>
+                    <h2>Outlook & Goals of this Project</h2>
+                    <p>
+                        We are aiming for <a href="https://github.com/Symatem/Symatem">Symatem</a>
+                        to become a unique way of combining all of these in one software architecture:
+                    </p>
+                    <ul>
+                        <li>Programming "Language"</li>
+                        <li>Integrated Development Environment</li>
+                        <li>Ontology Engine / Database / File System</li>
+                        <li>Operating System / Runtime Environment</li>
+                    </ul>
+                    <p>
+                        For this purpose we research a wide range of ideas including:
+                        Projectional editing, dataflow programming, version control, concurrency and distribution.
+                    </p>
+                    <p>
+                        Feel free to <a href="mailto:AlexanderMeissner@gmx.net">contact me</a> if you have questions.
+                        Feedback and contributions are welcome.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <script async defer src="https://buttons.github.io/buttons.js"></script>
+    </body>
+</html>
