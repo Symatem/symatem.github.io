@@ -34,6 +34,7 @@
                         Natural languages use the same concept but call it a sentence with subject, predicate and object instead of a triple with entity, attribute and value.
                         The visualizer below aggregates all triples which share the same entity in boxes in order to display the common entity only once in the top row.
                         Below follows the list of the aggregated triples with the attributes on the left and values on the right.
+                        This should be familiar to you as this representation of attribute-value-pairs is common in many OOP languages.
                         Furthermore each symbol has a virtual address space which allows them to have a bitstream containing literals like strings and numbers or even entire files.
                         We call them blobs and they are inlined graphically, so they don't have to be explored explicitly.
                     </p>
@@ -51,8 +52,8 @@
                     <h3>Explore</h3>
                     <ul>
                         <li>Drag and drop a symbol (box) around to reposition it</li>
-                        <li>Click on a green or blue socket (circle) to toggle the visibility of the connected symbol</li>
-                        <li>Click on a red socket to see all symbols indirectly connected to it</li>
+                        <li>Click on a green or blue socket (circle) to explore the connected symbol</li>
+                        <li>Click on a red socket to hide the symbol again</li>
                         <li>Shift-click on symbols, sockets or wires to select them. They can also be moved together</li>
                     </ul>
                 </div>
@@ -71,6 +72,96 @@
                     <input id="saveImage" value="Download" type="button" /><br/>
                     the ontology as a binary file.
                     Drop such a binary file in the editor to load it.
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve column">
+                    <hr/>
+                    <h2>Why should I use an ontology?</h2>
+                    <p>
+                        You probably already stumbled across some of these issues:
+                    </p>
+                    <h5>Inaccessible through Boundaries</h5>
+                    <p>
+                        Let's say you have a set of files, e.g. media from your last vacation like photos, videos, audio-records ...
+                        and you want to sometimes you want to find everything taken on a specific day and sometimes you want to see all your photos,
+                        then this is easy as your operating system probably exposes a UI to sort files in a directory by date or type.
+                        But what if you want to see all photos of a specific place or taken by a specific person or even both at once?
+                        Usually you only have to options here:
+                        Either you sort all files in your file system by using directories and filenames aside an index structure,
+                        which do only work to a certain extend as you can only perform very limited queries
+                        and restructuring is needed in order to enable other queries
+                        or you delegate the problem to an application with a background database which gives you more sorting options in the UI
+                        but less for other programs because the lack of general APIs to query this meta information.
+                        What if we could have such features simply build in our operating system which uses an ontology instead?
+                        Then sorting would simply be like a database query or view,
+                        which doesn't manipulate or depend on the underling structure.
+                    </p>
+                    <h5>Fixed Structures</h5>
+                    <p>
+                        Most of us probably know what a pain changing relational database schemes can become
+                        even when you just have a relatively small sqlite running.
+                        It consists of these steps of which some can be automated but still take time to apply:
+                        <ul>
+                            <li>Edit the OOP model</li>
+                            <li>Edit the scheme in the backing store</li>
+                            <li>Update all affected interfaces / queries</li>
+                            <li>Migrate the data from the old to the new scheme</li>
+                        </ul>
+                        This is because the scheme is the actual interface / contract between data store and your program
+                        which both sides have to rely on but doesn't belong to either side.
+                        Instead it's somewhat hanging in the void between both.
+                        In ontologies we don't need to define a scheme explicitly and even though data is structured
+                        this can happen in a static or a dynamic way, depending on how you are using it.
+                        This enables ontologies to be more adaptive to unforeseen situations and special cases.
+                    </p>
+                    <h5>Missing Means of Interpretation</h5>
+                    <p>
+                        You can't simply drag & drop or copy & paste data from one application into another.
+                        Only in very few cases, when both were explicitly developed to do so, it is possible.
+                        This is caused by the fact, that all means to process data are trapped inside the applications.
+                        But it is exactly this domain knowledge, which gives data meaning and therefore value.
+                        What if all applications could easily share this meta data needed to process data?
+                        Again an ontology as super structure might help.
+                    </p>
+                    <h5>Deducible Information</h5>
+                    <p>
+                        When programming OOP style you need back-references from time to time.
+                        E.g. I might have a tree in which every node just knows of its parent but I need to know the set of children or the other way around.
+                        Unfortunately I can't just ask for this information even though I know it is existing (at least implicitly).
+                        Instead they to be placed before they are needed and kept in sync when exchanging pointers.
+                        An ontology can give you back-references built in without thinking about them or defining their need explicitly.
+                        It is even imaginable that ontologies could deduce much more complex information.
+                    </p>
+                    <h5>Impedance mismatch</h5>
+                    <p>
+                        If you ever exported your in-memory object graph to JSON to store it,
+                        you know the problem of cyclic references for sure, as you can only store trees and
+                        all cycles have to be resolved by object IDs or similar to be reconstructed when loading it again.
+                        But we don't want to think about saving and loading at all.
+                        So much time is wasted in such unproductive manner.
+                        It should just happen somehow in the background.
+                        Now you might be thinking of databases again but these introduce the impedance mismatch.
+                        Ontologies are much closer to the object graph in applications and thus a better fit.
+                    </p>
+                    <br/>
+                    <h3>If ontologies are so great,<br/>how come they arn't used everywhere?</h3>
+                    <p>
+                        The biggest project in this direction is the so called <a href="https://en.wikipedia.org/wiki/Semantic_Web">semantic web</a>.
+                        But it has some annoying issues like being composed of too many technologies:
+                        <a href="https://en.wikipedia.org/wiki/Web_Ontology_Language">OWL</a>,
+                        <a href="https://en.wikipedia.org/wiki/SPARQL">SPARQL</a>,
+                        <a href="https://en.wikipedia.org/wiki/Resource_Description_Framework">RDF</a>,
+                        <a href="https://en.wikipedia.org/wiki/RDF_Schema">RDFS</a>,
+                        <a href="https://en.wikipedia.org/wiki/Turtle_(syntax)">Turtle</a>,
+                        <a href="https://en.wikipedia.org/wiki/Notation3">Notation3</a> etc.
+                        and a quite <a href="http://milicicvuk.com/blog/2011/07/19/ultimate-problem-of-rdf-and-semantic-web/">broken design</a>.
+                        Symatem does some things differently to address these issues.
+                        As you can see above our triples are completely semmetrical,
+                        so every symbol can be used in each position of a triple.
+                        Also litterals are not part of the triples but of the symbols instead.
+                        We call them blobs and they work much more like bytestreams in filesystems with the symbol being the inode.
+                    </p>
                 </div>
             </div>
             <div class="row">
