@@ -162,8 +162,9 @@ module.exports.prototype.setBlob = function(data, symbol) {
             }
             break;
     }
-    this.setBlobSize(symbol, data.length*8);
-    if(!this.writeBlob(buffer, symbol))
+    const size = (buffer) ? buffer.length*8 : 0;
+    this.setBlobSize(symbol, size);
+    if(size > 0 && !this.writeBlob(buffer, symbol))
         return false;
     this.setSolitary(symbol, this.symbolByName.BlobType, type);
     return true;
@@ -294,12 +295,14 @@ module.exports.prototype.chunkSize = 65536;
 module.exports.prototype.blobBufferSize = 4096;
 module.exports.prototype.symbolByName = {
     Void: 0,
-    BlobType: 13,
-    Natural: 14,
-    Integer: 15,
-    Float: 16,
-    UTF8: 17,
-    BinaryOntologyCodec: 20
+    PosX: 13,
+    PosY: 14,
+    BlobType: 15,
+    Natural: 16,
+    Integer: 17,
+    Float: 18,
+    UTF8: 19,
+    BinaryOntologyCodec: 22
 };
 module.exports.prototype.queryMode = ['M', 'V', 'I'];
 module.exports.prototype.queryMask = {};
@@ -509,15 +512,18 @@ module.exports.prototype.plugInWire = function(type, element, dstSocket, wire) {
 };
 
 module.exports.prototype.showSymbols = function(symbols) {
-    for(const symbol of symbols) {
-        if(this.panelIndex.has(symbol))
+    for(const entry of symbols) {
+        const panel = (entry.symbol) ? entry : { symbol: entry };
+        panel.type = 'entity';
+        panel.leftSide = [];
+        panel.rightSide = [];
+        if(this.panelIndex.has(panel.symbol))
             continue;
-        const panel = { type: 'entity', leftSide: [], rightSide: [], symbol: symbol },
-              result = this.symatem.queryArray(this.symatem.queryMask.MVV, symbol, 0, 0);
+        const result = this.symatem.queryArray(this.symatem.queryMask.MVV, panel.symbol, 0, 0);
         for(let i = 0; i < result.length; i += 2)
             this.generateSegment(panel, result[i], result[i+1]);
         this.wiredPanels.initializePanel(panel);
-        this.panelIndex.set(symbol, panel);
+        this.panelIndex.set(panel.symbol, panel);
         this.addLabel(panel);
         panel.onactivation = function(type, element, node) {
             if(type == 'panels') {
@@ -647,8 +653,23 @@ module.exports.prototype.removeSegment = function(panel, index) {
 };
 
 module.exports.prototype.saveImage = function() {
+    const tmpTriples = [];
+    for(const pair of this.panelIndex) {
+        const posX = this.symatem.createSymbol(),
+              posY = this.symatem.createSymbol();
+        this.symatem.setBlob(pair[1].x, posX);
+        this.symatem.setBlob(pair[1].y, posY);
+        let triple = [pair[0], this.symatem.symbolByName.PosX, posX];
+        this.symatem.linkTriple(triple[0], triple[1], triple[2]);
+        tmpTriples.push(triple);
+        triple = [pair[0], this.symatem.symbolByName.PosY, posY];
+        this.symatem.linkTriple(triple[0], triple[1], triple[2]);
+        tmpTriples.push(triple);
+    }
     const file = new Blob([this.symatem.encodeOntologyBinary()], {type: 'octet/stream'}),
           url = URL.createObjectURL(file);
+    for(const triple of tmpTriples)
+        this.symatem.unlinkTriple(triple[0], triple[1], triple[2]);
     if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
         window.open(url, '_blank');
     } else {
@@ -660,40 +681,37 @@ module.exports.prototype.saveImage = function() {
     URL.revokeObjectURL(url);
 };
 
-module.exports.prototype.loadImage = function(event) {
-    event.stopPropagation();
-    event.preventDefault();
-    const input = event.dataTransfer || event.target;
-    if(!input || !input.files || input.files.length != 1)
-        return;
-    const file = input.files[0], reader = new FileReader();
-    reader.onload = function(event) {
-        this.hideAllSymbols();
-        this.symatem.resetImage();
-        this.symatem.decodeOntologyBinary(new Uint8Array(reader.result));
-        this.showSymbols([1]); // TODO
-        this.wiredPanels.syncGraph();
-    }.bind(this);
-    reader.onerror = function(error) {
-        console.log(error);
-    }.bind(this);
-    reader.readAsArrayBuffer(file);
+module.exports.prototype.loadImage = function(binary) {
+    this.hideAllSymbols();
+    this.symatem.resetImage();
+    this.symatem.decodeOntologyBinary(binary);
+    const panels = [], posXarray = this.symatem.queryArray(this.symatem.queryMask.VMV, 0, this.symatem.symbolByName.PosX, 0);
+    for(let i = 0; i < posXarray.length; i += 2) {
+        const posYarray = this.symatem.queryArray(this.symatem.queryMask.MMV, posXarray[i], this.symatem.symbolByName.PosY, 0);
+        if(posYarray.length != 1)
+            continue;
+        const symbol = posXarray[i], posX = posXarray[i+1], posY = posYarray[0];
+        this.symatem.unlinkTriple(symbol, this.symatem.symbolByName.PosX, posX);
+        this.symatem.unlinkTriple(symbol, this.symatem.symbolByName.PosY, posY);
+        panels.push({
+            symbol: symbol,
+            x: this.symatem.getBlob(posX),
+            y: this.symatem.getBlob(posY)
+        });
+    }
+    this.showSymbols(panels);
+    this.wiredPanels.syncGraph();
 };
 
 if(process.browser)
     new module.exports(document.currentScript.parentNode).then(function(ontologyEditor) {
         const element = ontologyEditor.wiredPanels.svg.parentNode;
-        const codeInput = document.getElementById('code');
-        function loadFromText() {
+        ontologyEditor.fetchResource('Network.sym', 'text').then(function(codeInput) {
             ontologyEditor.hideAllSymbols();
             ontologyEditor.symatem.resetImage();
-            const result = ontologyEditor.symatem.deserializeHRL(codeInput.innerText);
+            const result = ontologyEditor.symatem.deserializeHRL(codeInput);
             ontologyEditor.showSymbols((result[0]) ? result : [result]);
             ontologyEditor.wiredPanels.syncGraph();
-        }
-        ontologyEditor.fetchResource(codeInput.innerText, 'text').then(function(result) {
-            codeInput.innerText = result;
-            loadFromText();
         });
         document.getElementById('saveImage').onclick = function(event) {
             ontologyEditor.saveImage();
@@ -703,7 +721,21 @@ if(process.browser)
             event.preventDefault();
             event.dataTransfer.dropEffect = 'copy';
         }, false);
-        element.addEventListener('drop', ontologyEditor.loadImage.bind(ontologyEditor), false);
+        element.addEventListener('drop', function(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            const input = event.dataTransfer || event.target;
+            if(!input || !input.files || input.files.length != 1)
+                return;
+            const file = input.files[0], reader = new FileReader();
+            reader.onload = function(event) {
+                ontologyEditor.loadImage(new Uint8Array(reader.result));
+            };
+            reader.onerror = function(error) {
+                console.log(error);
+            };
+            reader.readAsArrayBuffer(file);
+        }, false);
     });
 
 }).call(this,require('_process'))
@@ -1042,8 +1074,10 @@ module.exports.prototype.initializeWire = function (wire) {
 module.exports.prototype.initializePanel = function (panel) {
   const rect = this.svg.getBoundingClientRect();
   panel.springs = new Map();
-  panel.x = rect.width*Math.random();
-  panel.y = rect.height*Math.random();
+  if (!panel.x)
+    panel.x = rect.width*Math.random();
+  if (!panel.y)
+    panel.y = rect.height*Math.random();
   this.syncPanel(panel);
   this.panels.add(panel);
   this.dirtyFlag = true;
