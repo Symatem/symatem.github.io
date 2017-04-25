@@ -28,17 +28,7 @@
                         <a href="https://github.com/Symatem/CppCodeBase/blob/master/Targets/WASM.cpp">C++ side</a>,
                         <a href="https://github.com/Symatem/SymatemWasm/blob/master/SymatemWasm.js">JS side</a>.
                     <p>
-                    </p>
-                        If you have never heard of triple-based ontologies, you could think of them as mindmaps or graphs with labeled edges.
-                        Each edge is called a triple and connects three symbols: An entity with a value via an attribute.
-                        Natural languages use the same concept but call it a sentence with subject, predicate and object instead of a triple with entity, attribute and value.
-                        The visualizer below aggregates all triples which share the same entity in boxes in order to display the common entity only once in the top row.
-                        Below follows the list of the aggregated triples with the attributes on the left and values on the right.
-                        This should be familiar to you as this representation of attribute-value-pairs is common in many OOP languages.
-                        Furthermore each symbol has a virtual address space which allows them to have a bitstream containing literals like strings and numbers or even entire files.
-                        I call them blobs and they are inlined graphically, so they don't have to be explored explicitly.
-                    </p>
-                    <a class="github-button" href="https://github.com/Symatem/Symatem" data-icon="octicon-star" data-style="mega" data-count-href="/Symatem/Symatem/stargazers" data-count-api="/repos/Symatem/Symatem#stargazers_count" data-count-aria-label="# stargazers on GitHub" aria-label="Star Symatem/Symatem on GitHub">Star</a>
+                    <a class="github-button" href="https://github.com/Symatem/Symatem" data-icon="octicon-star" data-style="mega" data-count-href="/Symatem/Symatem/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star Symatem/Symatem on GitHub">Star</a>
                 </div>
             </div>
             <div class="row">
@@ -76,137 +66,19 @@
             <div class="row">
                 <div class="twelve column">
                     <hr/>
-                    <h2>Why should I care?</h2>
+                    <h2>What is an ontology?</h2>
                     <p>
-                        Have you ever dreamt of a world
-                        where software just works as intended,
-                        where you can put things together the way you like and everything immediately fits,
-                        so intuitive even grand parents could do it?
-                        Sounds like an utopia.
-                        Software engineering has to be hard, incomprehensible and full of pitfalls
-                        one has to spend many years to learn to avoid them,
-                        because that is the way it is supposed to be, right?
-                        Outsiders could even come to the conclusion that all "computer science"
-                        is a global conspiracy overcomplicating the easiest tasks and
-                        tyrannizing the entire world on purpose in order to earn big money.
-                        Sometimes I have a hard time convincing friends that it isn't the case,
-                        that it is just incredibly hard to do it right.
-                        I spent many years wondering why and how to fix it.
+                        If you have never heard of triple-based ontologies, you could think of them as mindmaps or graphs with labeled edges.
+                        Each edge is called a triple and connects three symbols: An entity with a value via an attribute.
+                        Natural languages use the same concept but call it a sentence with subject, predicate and object instead of a triple with entity, attribute and value.
+                        The visualizer below aggregates all triples which share the same entity in boxes in order to display the common entity only once in the top row.
+                        Below follows the list of the aggregated triples with the attributes on the left and values on the right.
+                        This should be familiar to you as this representation of attribute-value-pairs is common in many OOP languages.
+                        Furthermore each symbol has a virtual address space which allows them to have a bitstream containing literals like strings and numbers or even entire files.
+                        I call them blobs and they are inlined graphically, so they don't have to be explored explicitly.
+                        All in all, ontology engines can be seen as a kind of graph database.
                     </p>
-                    <p>
-                        Obviously I am not the first one hoping to solve it and so
-                        I try to learn from the past and dig up old but good ideas to combine them into something new.
-                        Because in my opinion there is something fundamentally wrong with the way we are doing it nowadays.
-                        Else we wouldn't experience these issues.
-                        But every step in any direction seems to make it worse, like being trapped in a local minimum
-                        and nobody dares to jump over the surrounding hills.
-                        Now you might expect that I will preset you a silver bullet probably in form of an ontology.
-                        Rest assured that isn't the case.
-                        Nevertheless, ontologies are a central aspect of the system I am working on.
-                        Even if I fail or if you dislike my approach I still want to encourage all of you out there
-                        to be more creative again and let lose of everything you had already thought to be carved in stone.
-                        It is the only way to get out of this mess. Otherwise it will go on forever.
-                        Technologies don't just happen to improve and evolve on their own.
-                        People are the driving force behind it.
-                    </p>
-                    <hr/>
-                    <h2>The problems of todays software</h2>
-                    <p>
-                        In my opinion integration of information is one of the biggest issues we are facing today.
-                        Of course there are many more problems like security, safety / robustness and distribution too,
-                        but the integration problems seem to be at least alleviatable
-                        by replacing our current background storages like filesystems and databases by a triple ontology.
-                        This probably won't solve the underlying problem of different domains and semantics in itself
-                        but instead I hope solve all the seemingly minor problems surrounding it so I can get a better view on what I am actually trying to solve.
-                        Below follows a list of these "minor problems":
-                    </p>
-                    <h4>Fixed / Static Structures</h4>
-                    <p>
-                        Definition: Structures and schemes have to be defined manually by the programmer in the beginning and
-                        the system can't change or adjust them at runtime. To swap in a prepared new scheme is the closest it gets to dynamic modification.
-                        <br/>Consequences: Systems require a complete shutdown and restart cycle for each not perfectly compatible manipulation which makes them hard to debug and maintain.
-                        They also tend to be overcomplicated as they have to be prepared for every possible scenario in advance
-                        and drag along old legacy versions of the structures in use.
-                        <br/>Example: You might know what pain changing relational database schemes can become
-                        even when you just have a relatively small sqlite running.
-                        Every modification results in four steps of which some can be automated but still take time:
-                        First you modify the OOP model in you source code, then the scheme in the database, then update all affected queries
-                        and finally migrate your data set from the old to the new scheme.
-                        This is not to be confused with the impedance mismatch, because the problem can still exist even if the semantics
-                        of application and background storage are the same. Different semantics just aggravate the problem of changing the structure.
-                        <br/>Solution: In ontologies we don't need to define a scheme explicitly, but the data is still structured.
-                        Furthermore ontologies can be more adaptive to unforeseen situations and special cases.
-                    </p>
-                    <h4>Impedance mismatch</h4>
-                    <p>
-                        Definition: Differences in semantics between an application and its background storage, which can not be overcome by an interface.
-                        <br/>Consequences: Lots of coupling and interconnectivity compromises modularity and promotes chaos.
-                        Development effort is wasted in writing and maintaining adapters.
-                        <br/>Example: You probably expected the well known <a href="https://en.wikipedia.org/wiki/Object-relational_impedance_mismatch">object-relational impedance mismatch</a> here,
-                        but I want to give you a different example: If you ever exported your in-memory object graph to JSON to store it,
-                        you know the problem of cyclic references for sure, as you can only store trees and
-                        all cycles have to be resolved by object IDs or similar to be reconstructed when loading it again.
-                        Hierarchical file systems in general are a bad fit for what we are using them for usually.
-                        Their desktop analogy is long overdue and often hinders even the simplest form of data structures.
-                        <br/>Solution: Ontologies are closer to the object graph in applications and thus are a better fit.
-                    </p>
-                    <h4>Deducible Information</h4>
-                    <p>
-                        Definition: Information which exists inside a system but can not be retrieved programmatically.
-                        <br/>Consequences: Redundancy is introduced to reproduce the hidden information manually.
-                        <br/>Example: When programming OOP style you need back-references from time to time.
-                        You might have a tree in which every node just knows of its parent but you need to know the set of children or the other way around.
-                        Unfortunately you can't just ask for this information even though you know it is existing (at least implicitly).
-                        Instead they must be placed before they are needed and kept in sync when exchanging pointers.
-                        <br/>Solution: An ontology can give you back-references built in without thinking about them or defining their need explicitly.
-                        It is even imaginable that ontologies could deduce much more complex information too.
-                    </p>
-                    <h4>Missing Means of Interpretation</h4>
-                    <p>
-                        Definition: Differences in semantics between adjacent applications and no interface is provided,
-                        but access to the raw data is possible nevertheless.
-                        The means of interpretation like program code, OOP models and metadata are hidden inside another application and can not be accessed.
-                        <br/>Consequences: Without the capabilities necessary to interpret and process the raw data it is useless.
-                        This leads to developers building their own adapters, which are rarely shared with others promoting an adapter hell
-                        and users tediously moving data across the desktop little by little doing conversions manually.
-                        <br/>Example: You can't simply drag & drop or copy & paste data from one application into another.
-                        Only in very few cases, when both were explicitly developed to do so, it is possible.
-                        Instead you have to use an explicit export & import menu if you are lucky or do the conversion entirely manually.
-                        <br/>Solution: Put everything inside a ontology to enable cross application access of metadata and object models.
-                        This is obviously a very open approach and somewhat ignores capsulation principles.
-                    </p>
-                    <h4>Prevented by design</h4>
-                    <p>
-                        Definition: Access to the data by other applications is explicitly prohibited.
-                        <br/>Consequences: This usually leads to the exploitation of other interfaces or features as workaround in order to gain access anyway.
-                        <br/>Example: Mobile platforms lock up everything in order to prevent the user from installing malware and
-                        only going the nice and shiny path the vendor intended.
-                        However it also means that applications can do almost nothing aside from multi media because
-                        it is the only thing a smartphone and its software is designed for.
-                        A common workaround is outsourcing everything online / into the cloud or hosting a local web-server
-                        where different applications can meet without the limits of the smartphone vendor.
-                        Users also install jail breaks to gain access to hidden functionality.
-                        Sadly I have the feeling that all this jailing does not create much more security than let's say a linux laptop has where I can do
-                        much more as a user and most of my applications are running with my privilege level.
-                        Because security and robustness don't come from prohibitions and bans, only from clever design.
-                        <br/>Solution: This is probably a issue where no technical solutions exist and thus ontologies don't help much either.
-                        As I said this shouldn't be done at all and if you want to have security then don't install any untrusted software at all.
-                    </p>
-                    <h4>Over standardization</h4>
-                    <p>
-                        Definition: APIs are provided to convert the data from and into specific formats.
-                        <br/>Consequences: This leads to standards which tend to be overloaded and hardened,
-                        because every application has different features which all get squashed into one standard
-                        which then will only adapt to new requirements slowly leaving lots of legacy to deal with.
-                        <br/>Example: Almost every standard I can think of would fit here.
-                        Therefore I will give you a positive example instead, which is very young and originated in an academical environment:
-                        <a href="http://riscv.org">RISC-V</a>.
-                        <br/>Solution: Because standards have to fulfill all the different needs at once they often mismatch reality.
-                        This is similar to static structures but spanning over multiple applications instead of spanning over time in one application.
-                        It is possible that ontologies could be merged automatically and thus remove the need for explicit and standardized APIs.
-                    </p>
-                    <br/>
-                    <h2>If ontologies are so great,<br/>how come they aren't used everywhere?</h2>
+                    <h2>How come ontologies aren't used everywhere?</h2>
                     <p>
                         The biggest project in this direction is the so called <a href="https://en.wikipedia.org/wiki/Semantic_Web">semantic web</a>.
                         But it has some annoying issues like being composed of too many technologies:
@@ -221,41 +93,17 @@
                         Symatem does many things differently to address these issues.
                         As you can see above the triples are completely symmetrical,
                         so every symbol can be used in each position of a triple.
-                        Also literals are not part of the triples but blobs of the symbols instead.
+                        Also literals are not part of the triples but are blobs which bind to the symbols instead.
                         Such blobs work much more like byte-streams in filesystems with the symbol being the inode.
                     </p>
-                </div>
-            </div>
-            <div class="row">
-                <div class="twelve column">
-                    <hr/>
-                    <h2>State of Affairs and Future</h2>
+                    <h2>Future of this Project</h2>
                     <p>
-                        I am aiming for <a href="https://github.com/Symatem/Symatem">Symatem</a>
-                        to become a unique way of combining all of these in one software architecture:
-                    </p>
-                    <ul>
-                        <li>Programming "Language" using Projectional Editing</li>
-                        <li>Integrated Development Environment</li>
-                        <li>Ontology Engine / Database / File System</li>
-                        <li>Operating System / Runtime Environment</li>
-                    </ul>
-                    <p>
-                        Currently Symatem is a background storage system for the most part.
-                        You can use it as POSIX process and connect to it using a TCP socket
-                        or load it as WASM in a browser or NodeJS.
-                        IDE tools like the one above are already available and a programming system is in the making too.
-                        Additionally I have created a side-project <a href="https://github.com/Lichtso/UnikernelExperiments">UnikernelExperiments</a>
-                        in order to qualify for developing the operating system.
-                    </p>
-                    <p>
-                        Please keep in mind that the contents of this site have and will change a lot over time.
-                        I am planing to release a publication covering most of this in the next month.
-                        This would then be a better place to refer to.
-                    </p>
-                    <p>
-                        Feel free to <a href="mailto:AlexanderMeissner@gmx.net">contact me</a> if you have questions.
-                        Feedback and contributions are welcome.
+                        This is a technical demo which shows what can be done using WebAssembly today.
+                        In the future I want to make Symatem a distributable and easy to use version controlled ontology engine,
+                        which works the same on servers as well as browser clients.
+                        It can already be run as POSIX-process, WebAssembly in the browser and probably in Node.JS soon too.
+                        The API and code base might change a lot, but feedback and questions are welcome everytime:
+                        <a href="https://github.com/lichtso">AlexanderMeissner [at] gmx.net</a>
                     </p>
                 </div>
             </div>
