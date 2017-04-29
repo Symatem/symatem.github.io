@@ -365,13 +365,6 @@ const WiredPanels = require('WiredPanels'),
 module.exports = function(element) {
     return new Promise(function(fullfill, reject) {
         if(typeof WebAssembly !== 'object') {
-            const message = document.createElement('div');
-            element.appendChild(message);
-            message.innerHTML = 'WebAssembly is a young technology and seems to be unsupported or disabled.<br /><br />';
-            const link = document.createElement('a');
-            message.appendChild(link);
-            link.href = 'http://webassembly.org/demo/';
-            link.innerText = 'Learn More';
             reject();
             return;
         }
@@ -759,19 +752,21 @@ if(process.browser)
 'use strict';
 
 module.exports = function (parentElement) {
-  document.body.addEventListener('keydown', this.handleKeyboard.bind(this));
+  while(parentElement.getElementsByClassName('fallback').length > 0)
+    parentElement.removeChild(parentElement.getElementsByClassName('fallback')[0]);
   this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   parentElement.appendChild(this.svg);
-  this.svg.parentNode.classList.add('WiredPanels');
-  this.svg.parentNode.onmousedown = function (event) {
+  document.body.addEventListener('keydown', this.handleKeyboard.bind(this));
+  this.svg.classList.add('WiredPanels');
+  this.svg.onmousedown = function (event) {
     this.deselectAll();
     event.stopPropagation();
     return true;
   }.bind(this);
-  this.svg.parentNode.ontouchstart = function (event) {
-    return this.svg.parentNode.onmousedown(event.touches[0]);
+  this.svg.ontouchstart = function (event) {
+    return this.svg.onmousedown(event.touches[0]);
   }.bind(this);
-  this.svg.parentNode.onmousemove = function (event) {
+  this.svg.onmousemove = function (event) {
     if (!this.dragging)
       return false;
     this.draggingMoved = true;
@@ -796,10 +791,10 @@ module.exports = function (parentElement) {
     event.stopPropagation();
     return true;
   }.bind(this);
-  this.svg.parentNode.ontouchmove = function (event) {
-    return this.svg.parentNode.onmousemove(event.touches[0]);
+  this.svg.ontouchmove = function (event) {
+    return this.svg.onmousemove(event.touches[0]);
   }.bind(this);
-  this.svg.parentNode.onmouseup = function (event) {
+  this.svg.onmouseup = function (event) {
     if (!this.dragging)
       return false;
     if (this.dragging.path) {
@@ -815,11 +810,11 @@ module.exports = function (parentElement) {
     event.stopPropagation();
     return true;
   }.bind(this);
-  this.svg.parentNode.ontouchend = function (event) {
-    return this.svg.parentNode.onmouseup(event.touches[0]);
+  this.svg.ontouchend = function (event) {
+    return this.svg.onmouseup(event.touches[0]);
   }.bind(this);
-  this.svg.parentNode.onmouseleave = function (event) {
-    return this.svg.parentNode.onmouseup(event);
+  this.svg.onmouseleave = function (event) {
+    return this.svg.onmouseup(event);
   }.bind(this);
 
   const svgDefs = this.createElement('defs', this.svg);
