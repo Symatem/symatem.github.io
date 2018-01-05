@@ -2,13 +2,11 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Show HN: Symatem - an Ontology Engine, Visualizer, and Editor Using WebAssembly</title>
-        <meta name="description" content="Reinventing Software from Scratch">
+        <title>Symatem</title>
         <meta name="author" content="Alexander Meißner">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="css/normalize.css">
         <link rel="stylesheet" href="css/skeleton.css">
-        <link rel="stylesheet" href="css/OntologyEditor.css">
         <link rel="icon" type="image/png" href="images/favicon.png">
         <meta name="theme-color" content="#FFFFFF">
     </head>
@@ -16,103 +14,14 @@
         <div class="container">
             <div class="row" style="margin-top: 10%;">
                 <div class="twelve column">
-                    <h1>Symatem Ontology Editor</h1>
+                    <h1>Symatem</h1>
                     <p>
-                        What you can see below is a visualizer and editor with an <a href="https://en.wikipedia.org/wiki/Ontology_(information_science)">ontology</a> engine as backend
-                        which is written in C++17, compiled to a <a href="http://webassembly.org">WebAssembly</a>
-                        <a href="https://github.com/Symatem/symatem.github.io/blob/master/js/Symatem.wasm">binary file</a>
-                        using <a href="http://clang.llvm.org/docs/ReleaseNotes.html">Clang 4.0</a> and then loaded into the browser.
-                        There some <a href="http://es6-features.org">ES6</a> code,
-                        which handles <a href="https://github.com/Symatem/symatem-ide/blob/master/lib/OntologyEditor.js">the user interaction</a>
-                        and <a href="https://github.com/arlac77/WiredPanels">the rendering</a>, is connected to it via these two files:
-                        <a href="https://github.com/Symatem/CppCodeBase/blob/master/Targets/WASM.cpp">C++ side</a>,
-                        <a href="https://github.com/Symatem/SymatemWasm/blob/master/main.js">JS side</a>.
+                        <a href="http://www.meetup.com/de-DE/LLVM-Social-Berlin/">25. January 2018</a><br />
+                        This site will be updated soon afterwards, read <a href="https://github.com/Symatem/Documentation">the docu</a> if you are impatient and curious.
                     <p>
-                    <a class="github-button" href="https://github.com/Symatem/Symatem" data-icon="octicon-star" data-style="mega" data-count-href="/Symatem/Symatem/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star Symatem/Symatem on GitHub">Star</a>
+                    <a class="github-button" href="https://github.com/Symatem/Symatem" data-icon="octicon-star" data-size="large" data-count-href="/Symatem/Symatem/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star Symatem/Symatem on GitHub">Star</a>
                 </div>
             </div>
-            <div class="row">
-                <div class="twelve column" id="OntologyEditor">
-                    <svg class="fallback WiredPanels" style="position: absolute;" xmlns="http://www.w3.org/2000/svg">
-                        <defs><filter id="blurFilter" x="-10" y="-10" width="20" height="20"><feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="3"></feGaussianBlur><feComponentTransfer in="blur" result="brighter"><feFuncA type="linear" slope="2.5"></feFuncA></feComponentTransfer><feMerge><feMergeNode in="brighter"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs>
-                        <g><g class="fadeIn" transform="translate(349.33823249598646, 221.4455049482466)"><rect class="panel entity" rx="10" ry="10" width="300" height="120"></rect><circle class="socket entity" cy="-12" r="5" cx="150"></circle><text text-anchor="middle" y="17" x="150">"MyRouter"</text><g><circle class="socket attribute" r="5" cx="12" cy="36"></circle><text text-anchor="start" x="24" y="41">"BlobType"</text><circle class="socket attribute" r="5" cx="12" cy="60"></circle><text text-anchor="start" x="24" y="65">"Type"</text><circle class="socket attribute" r="5" cx="12" cy="84"></circle><text text-anchor="start" x="24" y="89">"Interface"</text><circle class="socket attribute" r="5" cx="12" cy="108"></circle><text text-anchor="start" x="24" y="113">"Interface"</text></g><g><circle class="socket value" r="5" cx="288" cy="36"></circle><text text-anchor="end" x="276" y="41">"UTF8"</text><circle class="socket value" r="5" cx="288" cy="60"></circle><text text-anchor="end" x="276" y="65">"FRITZ!Box"</text><circle class="socket value" r="5" cx="288" cy="84"></circle><text text-anchor="end" x="276" y="89" class="disabled">#619</text><circle class="socket value" r="5" cx="288" cy="108"></circle><text text-anchor="end" x="276" y="113" class="disabled">#676</text></g><g class="panel entity"><path d="M0,24h300" class="noHover"></path><path d="M0,48h300" class="noHover"></path><path d="M0,72h300" class="noHover"></path><path d="M0,96h300" class="noHover"></path></g></g><g class="fadeIn" transform="translate(432.63011537002853, 504.3410246497052)"><rect class="panel entity" rx="10" ry="10" width="300" height="192"></rect><circle class="socket entity" cy="-12" r="5" cx="150"></circle><text text-anchor="middle" y="17" x="150">"Parallella"</text><g><circle class="socket attribute" r="5" cx="12" cy="36"></circle><text text-anchor="start" x="24" y="41">"BlobType"</text><circle class="socket attribute" r="5" cx="12" cy="60"></circle><text text-anchor="start" x="24" y="65">"Type"</text><circle class="socket attribute" r="5" cx="12" cy="84"></circle><text text-anchor="start" x="24" y="89">"Manufacturer"</text><circle class="socket attribute" r="5" cx="12" cy="108"></circle><text text-anchor="start" x="24" y="113">"Core"</text><circle class="socket attribute" r="5" cx="12" cy="132"></circle><text text-anchor="start" x="24" y="137">"Core"</text><circle class="socket attribute" r="5" cx="12" cy="156"></circle><text text-anchor="start" x="24" y="161">"Memory"</text><circle class="socket attribute" r="5" cx="12" cy="180"></circle><text text-anchor="start" x="24" y="185">"Interface"</text></g><g><circle class="socket value" r="5" cx="288" cy="36"></circle><text text-anchor="end" x="276" y="41">"UTF8"</text><circle class="socket value" r="5" cx="288" cy="60"></circle><text text-anchor="end" x="276" y="65">"Computer"</text><circle class="socket value" r="5" cx="288" cy="84"></circle><text text-anchor="end" x="276" y="89">"Adapteva"</text><circle class="socket value" r="5" cx="288" cy="108"></circle><text text-anchor="end" x="276" y="113" class="disabled">#458</text><circle class="socket value" r="5" cx="288" cy="132"></circle><text text-anchor="end" x="276" y="137" class="disabled">#493</text><circle class="socket value" r="5" cx="288" cy="156"></circle><text text-anchor="end" x="276" y="161" class="disabled">#526</text><circle class="socket value" r="5" cx="288" cy="180"></circle><text text-anchor="end" x="276" y="185" class="disabled">#563</text></g><g class="panel entity"><path d="M0,24h300" class="noHover"></path><path d="M0,48h300" class="noHover"></path><path d="M0,72h300" class="noHover"></path><path d="M0,96h300" class="noHover"></path><path d="M0,120h300" class="noHover"></path><path d="M0,144h300" class="noHover"></path><path d="M0,168h300" class="noHover"></path></g></g><g class="fadeIn" transform="translate(107.63011537002853, 384)"><rect class="panel entity" rx="10" ry="10" width="300" height="168"></rect><circle class="socket entity" cy="-12" r="5" cx="150"></circle><text text-anchor="middle" y="17" x="150">"Pine64+"</text><g><circle class="socket attribute" r="5" cx="12" cy="36"></circle><text text-anchor="start" x="24" y="41">"BlobType"</text><circle class="socket attribute" r="5" cx="12" cy="60"></circle><text text-anchor="start" x="24" y="65">"Type"</text><circle class="socket attribute" r="5" cx="12" cy="84"></circle><text text-anchor="start" x="24" y="89">"Manufacturer"</text><circle class="socket attribute" r="5" cx="12" cy="108"></circle><text text-anchor="start" x="24" y="113">"Core"</text><circle class="socket attribute" r="5" cx="12" cy="132"></circle><text text-anchor="start" x="24" y="137">"Memory"</text><circle class="socket attribute" r="5" cx="12" cy="156"></circle><text text-anchor="start" x="24" y="161">"Interface"</text></g><g><circle class="socket value" r="5" cx="288" cy="36"></circle><text text-anchor="end" x="276" y="41">"UTF8"</text><circle class="socket value" r="5" cx="288" cy="60"></circle><text text-anchor="end" x="276" y="65">"Computer"</text><circle class="socket value" r="5" cx="288" cy="84"></circle><text text-anchor="end" x="276" y="89">"PINE64"</text><circle class="socket value" r="5" cx="288" cy="108"></circle><text text-anchor="end" x="276" y="113" class="disabled">#265</text><circle class="socket value" r="5" cx="288" cy="132"></circle><text text-anchor="end" x="276" y="137" class="disabled">#315</text><circle class="socket value" r="5" cx="288" cy="156"></circle><text text-anchor="end" x="276" y="161" class="disabled">#375</text></g><g class="panel entity"><path d="M0,24h300" class="noHover"></path><path d="M0,48h300" class="noHover"></path><path d="M0,72h300" class="noHover"></path><path d="M0,96h300" class="noHover"></path><path d="M0,120h300" class="noHover"></path><path d="M0,144h300" class="noHover"></path></g></g><g class="fadeIn" transform="translate(499.7778282116045, 365.4571541730445)"><rect class="panel entity" rx="10" ry="10" width="300" height="96"></rect><circle class="socket entity" cy="-12" r="5" cx="150"></circle><text text-anchor="middle" y="17" x="150">"FRITZ!Box"</text><g><circle class="socket attribute" r="5" cx="12" cy="36"></circle><text text-anchor="start" x="24" y="41">"BlobType"</text><circle class="socket attribute" r="5" cx="12" cy="60"></circle><text text-anchor="start" x="24" y="65">"Type"</text><circle class="socket attribute" r="5" cx="12" cy="84"></circle><text text-anchor="start" x="24" y="89">"Manufacturer"</text></g><g><circle class="socket value" r="5" cx="288" cy="36"></circle><text text-anchor="end" x="276" y="41">"UTF8"</text><circle class="socket value" r="5" cx="288" cy="60"></circle><text text-anchor="end" x="276" y="65">"Router"</text><circle class="socket value" r="5" cx="288" cy="84"></circle><text text-anchor="end" x="276" y="89">"AVM"</text></g><g class="panel entity"><path d="M0,24h300" class="noHover"></path><path d="M0,48h300" class="noHover"></path><path d="M0,72h300" class="noHover"></path></g></g></g><g><path class="wire fadeIn value" d="M637.3382324959864,281.4455049482466C649.7778282116045,281.4455049482466 637.3382324959864,353.4571541730445 649.7778282116045,353.4571541730445"></path></g>
-                    </svg>
-                    <div class="fallback">Faild to load WebAssembly. It is probably disabled or still unsupported (on mobile devices).<br/><br/><a href="http://webassembly.org/demo/">Learn More</a></div>
-                    <script async defer src="js/OntologyEditor.js"></script>
-                </div>
-            </div>
-            <div class="row" style="margin-top: 3rem;">
-                <div class="one-third column">
-                    <h3>Explore</h3>
-                    <ul>
-                        <li>Drag and drop a symbol (box) around to reposition it</li>
-                        <li>Click on a green or blue socket (circle) to explore the connected symbol</li>
-                        <li>Click on a red socket to hide the symbol again</li>
-                        <li>Shift-click on symbols, sockets or wires to select them. They can also be moved together</li>
-                    </ul>
-                </div>
-                <div class="one-third column">
-                    <h3>Edit</h3>
-                    <ul>
-                        <li>Click on a symbol to edit it</li>
-                        <li>Drag a wire form a socket and drop it on a symbol to add socket slots</li>
-                        <li>Drag a wire to or from an empty socket to copy the configuration of another socket</li>
-                        <li>Press backspace to delete selected items</li>
-                        <li>Double-click on the background of the editor to find existing symbols or to add new ones</li>
-                    </ul>
-                </div>
-                <div class="one-third column">
-                    <h3>Store / Load</h3>
-                    <input id="saveImage" value="Download" type="button" /><br/>
-                    the ontology as a binary file.
-                    Drop such a binary file in the editor to load it.
-                </div>
-            </div>
-            <div class="row">
-                <div class="twelve column">
-                    <hr/>
-                    <h2>What is an ontology?</h2>
-                    <p>
-                        If you have never heard of triple-based ontologies, you could think of them as mindmaps or graphs with labeled edges.
-                        Each edge is called a triple and connects three symbols: An entity with a value via an attribute.
-                        Natural languages use the same concept but call it a sentence with subject, predicate and object instead of a triple with entity, attribute and value.
-                        The visualizer below aggregates all triples which share the same entity in boxes in order to display the common entity only once in the top row.
-                        Below follows the list of the aggregated triples with the attributes on the left and values on the right.
-                        This should be familiar to you as this representation of attribute-value-pairs is common in many OOP languages.
-                        Furthermore each symbol has a virtual address space which allows them to have a bitstream containing literals like strings and numbers or even entire files.
-                        I call them blobs and they are inlined graphically, so they don't have to be explored explicitly.
-                        All in all, ontology engines can be seen as a kind of graph database.
-                    </p>
-                    <h2>How come ontologies aren't used everywhere?</h2>
-                    <p>
-                        The biggest project in this direction is the so called <a href="https://en.wikipedia.org/wiki/Semantic_Web">semantic web</a>.
-                        But it has some annoying issues like being composed of too many technologies:
-                        <a href="https://en.wikipedia.org/wiki/Web_Ontology_Language">OWL</a>,
-                        <a href="https://en.wikipedia.org/wiki/SPARQL">SPARQL</a>,
-                        <a href="https://en.wikipedia.org/wiki/Resource_Description_Framework">RDF</a>,
-                        <a href="https://en.wikipedia.org/wiki/RDF_Schema">RDFS</a>,
-                        <a href="https://en.wikipedia.org/wiki/Turtle_(syntax)">Turtle</a>,
-                        <a href="https://en.wikipedia.org/wiki/Notation3">Notation3</a> etc.
-                        and a quite <a href="http://milicicvuk.com/blog/2011/07/19/ultimate-problem-of-rdf-and-semantic-web/">broken design</a>.
-                        I somewhat blame the semantic web for stigmatizing the idea of ontologies with negative associations.
-                        Symatem does many things differently to address these issues.
-                        As you can see above the triples are completely symmetrical,
-                        so every symbol can be used in each position of a triple.
-                        Also literals are not part of the triples but are blobs which bind to the symbols instead.
-                        Such blobs work much more like byte-streams in filesystems with the symbol being the inode.
-                    </p>
-                    <h2>Future of this Project</h2>
-                    <p>
-                        This is a technical demo which shows what can be done using WebAssembly today.
-                        In the future I want to make Symatem a distributable and easy to use version controlled ontology engine,
-                        which works the same on servers as well as browser clients.
-                        It can already be run as POSIX-process, WebAssembly in the browser and probably in Node.JS soon too.
-                        The API and code base might change a lot, but feedback and questions are welcome everytime:
-                        <a href="https://github.com/lichtso">AlexanderMeissner [at] gmx.net</a>
-                    </p>
-                </div>
-            </div>
-        </div>
         <script async defer src="https://buttons.github.io/buttons.js"></script>
     </body>
 </html>
